@@ -11,6 +11,7 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -28,7 +29,7 @@ func main() {
 		os.Exit(1)
 	}
 	var exitCode int
-	fomrat := os.Args[1]
+	format := os.Args[1]
 	for _, file := range os.Args[2:] {
 		err := encodeG711(file, format)
 		if err != nil {
@@ -39,12 +40,11 @@ func main() {
 	os.Exit(exitCode)
 }
 
-func encodeG711(file, fomrat string) error {
-	input, err := os.Open(file)
+func encodeG711(file, format string) error {
+	input, err := ioutil.ReadFile(file)
 	if err != nil {
 		return err
 	}
-	defer input.Close()
 
 	extension := strings.ToLower(filepath.Ext(file))
 	if extension != ".wav" && extension != ".raw" && extension != ".sln" {
