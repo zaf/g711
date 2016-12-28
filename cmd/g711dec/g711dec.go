@@ -50,12 +50,12 @@ func decodeG711(file string) error {
 	extension := strings.ToLower(filepath.Ext(file))
 	var decoder *g711.Reader
 	if extension == ".alaw" || extension == ".al" {
-		decoder, err = g711.NewAlawReader(input, g711.Lpcm)
+		decoder, err = g711.NewAlawDecoder(input, g711.Lpcm)
 		if err != nil {
 			return err
 		}
 	} else if extension == ".ulaw" || extension == ".ul" {
-		decoder, err = g711.NewUlawReader(input, g711.Lpcm)
+		decoder, err = g711.NewUlawDecoder(input, g711.Lpcm)
 		if err != nil {
 			return err
 		}

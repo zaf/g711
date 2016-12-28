@@ -22,12 +22,10 @@ import (
 )
 
 const (
-	// Alaw G711 encoded PCM data
-	Alaw = iota
-	// Ulaw G711  encoded PCM data
-	Ulaw
-	// Lpcm 16bit signed linear data
-	Lpcm
+	// Input and output formats
+	Alaw = iota // Alaw G711 encoded PCM data
+	Ulaw        // Ulaw G711  encoded PCM data
+	Lpcm        // Lpcm 16bit signed linear data
 )
 
 type encoder func(int16) uint8
@@ -50,9 +48,9 @@ type Writer struct {
 	buf    *bytes.Buffer //local buffer
 }
 
-// NewAlawReader returns a pointer to a Reader that decodes or trans-codes A-law data.
+// NewAlawDecoder returns a pointer to a Reader that decodes or trans-codes A-law data.
 // It takes as input the source data Reader and the output encoding fomrat.
-func NewAlawReader(reader io.Reader, output int) (*Reader, error) {
+func NewAlawDecoder(reader io.Reader, output int) (*Reader, error) {
 	if output != Ulaw && output != Lpcm {
 		return nil, errors.New("Invalid output format")
 	}
@@ -60,9 +58,9 @@ func NewAlawReader(reader io.Reader, output int) (*Reader, error) {
 	return &Reader{input: Alaw, output: output, r: reader, buf: b}, nil
 }
 
-// NewUlawReader returns a pointer to a Reader that decodes or trans-codes u-law data.
+// NewUlawDecoder returns a pointer to a Reader that decodes or trans-codes u-law data.
 // It takes as input the source data Reader and the output encoding fomrat.
-func NewUlawReader(reader io.Reader, output int) (*Reader, error) {
+func NewUlawDecoder(reader io.Reader, output int) (*Reader, error) {
 	if output != Alaw && output != Lpcm {
 		return nil, errors.New("Invalid output format")
 	}
@@ -70,9 +68,9 @@ func NewUlawReader(reader io.Reader, output int) (*Reader, error) {
 	return &Reader{input: Ulaw, output: output, r: reader, buf: b}, nil
 }
 
-// NewAlawWriter returns a pointer to a Writer that encodes data to A-law.
+// NewAlawEncoder returns a pointer to a Writer that encodes data to A-law.
 // It takes as input the destination data Writer and the input encoding fomrat.
-func NewAlawWriter(writer io.Writer, input int) (*Writer, error) {
+func NewAlawEncoder(writer io.Writer, input int) (*Writer, error) {
 	if input != Ulaw && input != Lpcm {
 		return nil, errors.New("Invalid input format")
 	}
@@ -80,9 +78,9 @@ func NewAlawWriter(writer io.Writer, input int) (*Writer, error) {
 	return &Writer{input: input, output: Alaw, w: writer, buf: b}, nil
 }
 
-// NewUlawWriter returns a pointer to a Writer that encodes data to u-law.
+// NewUlawEncoder returns a pointer to a Writer that encodes data to u-law.
 // It takes as input the destination data Writer and the input encoding fomrat.
-func NewUlawWriter(writer io.Writer, input int) (*Writer, error) {
+func NewUlawEncoder(writer io.Writer, input int) (*Writer, error) {
 	if input != Alaw && input != Lpcm {
 		return nil, errors.New("Invalid input format")
 	}

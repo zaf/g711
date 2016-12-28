@@ -1,5 +1,5 @@
 # g711
---
+
     import "github.com/zaf/g711"
 
 Package g711 implements encoding and decoding of G711.0 compressed sound data.
@@ -7,17 +7,14 @@ G.711 is an ITU-T standard for audio companding.
 
 For usage details please see the code snippets in the cmd folder.
 
-
 ## Usage
 
 ```go
 const (
-	// Alaw G711 encoded PCM data
-	Alaw = iota
-	// Ulaw G711  encoded PCM data
-	Ulaw
-	// Lpcm 16bit signed linear data
-	Lpcm
+	// Input and output formats
+	Alaw = iota // Alaw G711 encoded PCM data
+	Ulaw        // Ulaw G711  encoded PCM data
+	Lpcm        // Lpcm 16bit signed linear data
 )
 ```
 
@@ -73,20 +70,20 @@ type Reader struct {
 Reader reads G711 PCM data and decodes it to 16bit LPCM or directly transcodes
 between A-law and u-law
 
-#### func  NewAlawReader
+#### func  NewAlawDecoder
 
 ```go
-func NewAlawReader(reader io.Reader, output int) (*Reader, error)
+func NewAlawDecoder(reader io.Reader, output int) (*Reader, error)
 ```
-NewAlawReader returns a pointer to a Reader that decodes or trans-codes A-law
+NewAlawDecoder returns a pointer to a Reader that decodes or trans-codes A-law
 data. It takes as input the source data Reader and the output encoding fomrat.
 
-#### func  NewUlawReader
+#### func  NewUlawDecoder
 
 ```go
-func NewUlawReader(reader io.Reader, output int) (*Reader, error)
+func NewUlawDecoder(reader io.Reader, output int) (*Reader, error)
 ```
-NewUlawReader returns a pointer to a Reader that decodes or trans-codes u-law
+NewUlawDecoder returns a pointer to a Reader that decodes or trans-codes u-law
 data. It takes as input the source data Reader and the output encoding fomrat.
 
 #### func (*Reader) Read
@@ -115,21 +112,21 @@ type Writer struct {
 Writer encodes 16bit LPCM data to G711 PCM or directly transcodes between A-law
 and u-law
 
-#### func  NewAlawWriter
+#### func  NewAlawEncoder
 
 ```go
-func NewAlawWriter(writer io.Writer, input int) (*Writer, error)
+func NewAlawEncoder(writer io.Writer, input int) (*Writer, error)
 ```
-NewAlawWriter returns a pointer to a Writer that encodes data to A-law. It takes
-as input the destination data Writer and the input encoding fomrat.
+NewAlawEncoder returns a pointer to a Writer that encodes data to A-law. It
+takes as input the destination data Writer and the input encoding fomrat.
 
-#### func  NewUlawWriter
+#### func  NewUlawEncoder
 
 ```go
-func NewUlawWriter(writer io.Writer, input int) (*Writer, error)
+func NewUlawEncoder(writer io.Writer, input int) (*Writer, error)
 ```
-NewUlawWriter returns a pointer to a Writer that encodes data to u-law. It takes
-as input the destination data Writer and the input encoding fomrat.
+NewUlawEncoder returns a pointer to a Writer that encodes data to u-law. It
+takes as input the destination data Writer and the input encoding fomrat.
 
 #### func (*Writer) Flush
 
