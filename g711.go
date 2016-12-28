@@ -170,14 +170,14 @@ func (w *Writer) Write(p []byte) (int, error) {
 			}
 		}
 	}
-	i, err := w.destination.Write(w.buf.Bytes())
+	i, err := w.buf.WriteTo(w.destination)
 	if err == nil {
 		err = wrErr
 	}
 	if w.input == Lpcm {
 		i *= 2 // Report back the correct number of bytes written from p
 	}
-	return i, err
+	return int(i), err
 }
 
 // Flush flushes any pending data to the underlying writer.
