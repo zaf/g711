@@ -36,16 +36,16 @@ type transcoder func(uint8) uint8
 type Reader struct {
 	input  int           // source format
 	output int           // output format
-	r      io.Reader     // source data
+	source io.Reader     // source data
 	buf    *bytes.Buffer // local buffer
 }
 
 // Writer encodes 16bit LPCM data to G711 PCM or directly transcodes between A-law and u-law
 type Writer struct {
-	input  int           // source format
-	output int           // output format
-	w      io.Writer     // output data
-	buf    *bytes.Buffer //local buffer
+	input       int           // source format
+	output      int           // output format
+	destination io.Writer     // output data
+	buf         *bytes.Buffer //local buffer
 }
 
 // NewAlawDecoder returns a pointer to a Reader that decodes or trans-codes A-law data.
@@ -55,7 +55,7 @@ func NewAlawDecoder(reader io.Reader, output int) (*Reader, error) {
 		return nil, errors.New("Invalid output format")
 	}
 	b := new(bytes.Buffer)
-	return &Reader{input: Alaw, output: output, r: reader, buf: b}, nil
+	return &Reader{input: Alaw, output: output, source: reader, buf: b}, nil
 }
 
 // NewUlawDecoder returns a pointer to a Reader that decodes or trans-codes u-law data.
@@ -65,7 +65,7 @@ func NewUlawDecoder(reader io.Reader, output int) (*Reader, error) {
 		return nil, errors.New("Invalid output format")
 	}
 	b := new(bytes.Buffer)
-	return &Reader{input: Ulaw, output: output, r: reader, buf: b}, nil
+	return &Reader{input: Ulaw, output: output, source: reader, buf: b}, nil
 }
 
 // NewAlawEncoder returns a pointer to a Writer that encodes data to A-law.
@@ -75,7 +75,7 @@ func NewAlawEncoder(writer io.Writer, input int) (*Writer, error) {
 		return nil, errors.New("Invalid input format")
 	}
 	b := new(bytes.Buffer)
-	return &Writer{input: input, output: Alaw, w: writer, buf: b}, nil
+	return &Writer{input: input, output: Alaw, destination: writer, buf: b}, nil
 }
 
 // NewUlawEncoder returns a pointer to a Writer that encodes data to u-law.
@@ -85,19 +85,19 @@ func NewUlawEncoder(writer io.Writer, input int) (*Writer, error) {
 		return nil, errors.New("Invalid input format")
 	}
 	b := new(bytes.Buffer)
-	return &Writer{input: input, output: Ulaw, w: writer, buf: b}, nil
+	return &Writer{input: input, output: Ulaw, destination: writer, buf: b}, nil
 }
 
 // Reset discards the Reader state. This permits reusing a Reader rather than allocating a new one.
 func (r *Reader) Reset(reader io.Reader) {
 	r.buf.Reset()
-	r.r = reader
+	r.source = reader
 }
 
 // Reset discards the Writer state. This permits reusing a Writer rather than allocating a new one.
 func (w *Writer) Reset(writer io.Writer) {
 	w.buf.Reset()
-	w.w = writer
+	w.destination = writer
 }
 
 // Read decodes G711 data. Reads up to len(p) bytes into p, returns the number
@@ -112,34 +112,38 @@ func (r *Reader) Read(p []byte) (int, error) {
 		dec = DecodeUlaw
 		tr = Ulaw2Alaw
 	}
-	b := make([]byte, 4096)
-	n, rErr := r.r.Read(b)
-	var wrErr error
-	for _, data := range b[0:n] {
-		if r.output == Lpcm {
-			lpcm := dec(data) // Decode G711 data to LPCM
-			_, wrErr = r.buf.Write([]byte{byte(lpcm), byte(lpcm >> 8)})
-		} else {
-			wrErr = r.buf.WriteByte(tr(data)) // Trans-code
-		}
-		if wrErr != nil {
-			break
-		}
+	var i int
+	var err error
+	_, err = r.buf.ReadFrom(r.source)
+	if err != nil {
+		return i, err
 	}
-	i, err := r.buf.Read(p)
-	if err == nil {
-		if wrErr != nil {
-			err = wrErr
-		} else {
-			err = rErr
+	var frame byte
+	if r.output == Lpcm { // Decode G711 data to LPCM
+		for i = 0; i < len(p)-2; i = i + 2 {
+			frame, err = r.buf.ReadByte()
+			if err != nil {
+				break
+			}
+			decoded := dec(frame)
+			p[i] = byte(decoded)
+			p[i+1] = byte(decoded >> 8)
+		}
+	} else { // Trans-code
+		for i = 0; i < len(p); i++ {
+			frame, err = r.buf.ReadByte()
+			if err != nil {
+				break
+			}
+			p[i] = tr(frame)
 		}
 	}
 	return i, err
 }
 
 // Write encodes G711 Data. Writes len(p) bytes from p to the underlying data stream,
-// returns the number of bytes written from p (0 <= n <= len(p)/2 due to compression)
-// and any error encountered that caused the write to stop early.
+// returns the number of bytes written from p (0 <= n <= len(p)) and any error encountered
+// that caused the write to stop early.
 func (w *Writer) Write(p []byte) (int, error) {
 	var err, wrErr error
 	var enc encoder
@@ -166,9 +170,12 @@ func (w *Writer) Write(p []byte) (int, error) {
 			}
 		}
 	}
-	i, err := w.w.Write(w.buf.Bytes())
+	i, err := w.destination.Write(w.buf.Bytes())
 	if err == nil {
 		err = wrErr
+	}
+	if w.input == Lpcm {
+		i *= 2 // Report back the correct number of bytes written from p
 	}
 	return i, err
 }
@@ -176,7 +183,7 @@ func (w *Writer) Write(p []byte) (int, error) {
 // Flush flushes any pending data to the underlying writer.
 func (w *Writer) Flush() (err error) {
 	if w.buf.Len() > 0 {
-		_, err = w.buf.WriteTo(w.w)
+		_, err = w.buf.WriteTo(w.destination)
 	}
 	return
 }
