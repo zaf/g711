@@ -149,5 +149,5 @@ allocating a new one.
 func (w *Writer) Write(p []byte) (int, error)
 ```
 Write encodes G711 Data. Writes len(p) bytes from p to the underlying data
-stream, returns the number of bytes written from p (0 <= n <= len(p)/2 due to
-compression) and any error encountered that caused the write to stop early.
+stream, returns the number of bytes written from p (0 <= n <= len(p)) and any
+error encountered that caused the write to stop early.
