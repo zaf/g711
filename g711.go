@@ -28,24 +28,22 @@ const (
 	Lpcm        // Lpcm 16bit signed linear data
 )
 
-type encoder func(int16) uint8
-type decoder func(uint8) int16
-type transcoder func(uint8) uint8
-
 // Reader reads G711 PCM data and decodes it to 16bit LPCM or directly transcodes between A-law and u-law
 type Reader struct {
-	input  int           // source format
-	output int           // output format
-	source io.Reader     // source data
-	buf    *bytes.Buffer // local buffer
+	output    int               // output format
+	decode    func(uint8) int16 // decoding function
+	transcode func(uint8) uint8 // transcoding function
+	source    io.Reader         // source data
+	buf       *bytes.Buffer     // local buffer
 }
 
 // Writer encodes 16bit LPCM data to G711 PCM or directly transcodes between A-law and u-law
 type Writer struct {
-	input       int           // source format
-	output      int           // output format
-	destination io.Writer     // output data
-	buf         *bytes.Buffer //local buffer
+	input       int               // input format
+	encode      func(int16) uint8 // encoding function
+	transcode   func(uint8) uint8 // transcoding function
+	destination io.Writer         // output data
+	buf         *bytes.Buffer     //local buffer
 }
 
 // NewAlawDecoder returns a pointer to a Reader that decodes or trans-codes A-law data.
@@ -54,8 +52,14 @@ func NewAlawDecoder(reader io.Reader, output int) (*Reader, error) {
 	if output != Ulaw && output != Lpcm {
 		return nil, errors.New("Invalid output format")
 	}
-	b := new(bytes.Buffer)
-	return &Reader{input: Alaw, output: output, source: reader, buf: b}, nil
+	r := Reader{
+		output:    output,
+		decode:    DecodeAlaw,
+		transcode: Alaw2Ulaw,
+		source:    reader,
+		buf:       new(bytes.Buffer),
+	}
+	return &r, nil
 }
 
 // NewUlawDecoder returns a pointer to a Reader that decodes or trans-codes u-law data.
@@ -64,8 +68,14 @@ func NewUlawDecoder(reader io.Reader, output int) (*Reader, error) {
 	if output != Alaw && output != Lpcm {
 		return nil, errors.New("Invalid output format")
 	}
-	b := new(bytes.Buffer)
-	return &Reader{input: Ulaw, output: output, source: reader, buf: b}, nil
+	r := Reader{
+		output:    output,
+		decode:    DecodeUlaw,
+		transcode: Ulaw2Alaw,
+		source:    reader,
+		buf:       new(bytes.Buffer),
+	}
+	return &r, nil
 }
 
 // NewAlawEncoder returns a pointer to a Writer that encodes data to A-law.
@@ -74,8 +84,14 @@ func NewAlawEncoder(writer io.Writer, input int) (*Writer, error) {
 	if input != Ulaw && input != Lpcm {
 		return nil, errors.New("Invalid input format")
 	}
-	b := new(bytes.Buffer)
-	return &Writer{input: input, output: Alaw, destination: writer, buf: b}, nil
+	w := Writer{
+		input:       input,
+		encode:      EncodeAlaw,
+		transcode:   Ulaw2Alaw,
+		destination: writer,
+		buf:         new(bytes.Buffer),
+	}
+	return &w, nil
 }
 
 // NewUlawEncoder returns a pointer to a Writer that encodes data to u-law.
@@ -84,8 +100,14 @@ func NewUlawEncoder(writer io.Writer, input int) (*Writer, error) {
 	if input != Alaw && input != Lpcm {
 		return nil, errors.New("Invalid input format")
 	}
-	b := new(bytes.Buffer)
-	return &Writer{input: input, output: Ulaw, destination: writer, buf: b}, nil
+	w := Writer{
+		input:       input,
+		encode:      EncodeUlaw,
+		transcode:   Alaw2Ulaw,
+		destination: writer,
+		buf:         new(bytes.Buffer),
+	}
+	return &w, nil
 }
 
 // Reset discards the Reader state. This permits reusing a Reader rather than allocating a new one.
@@ -103,15 +125,6 @@ func (w *Writer) Reset(writer io.Writer) {
 // Read decodes G711 data. Reads up to len(p) bytes into p, returns the number
 // of bytes read and any error encountered.
 func (r *Reader) Read(p []byte) (int, error) {
-	var dec decoder
-	var tr transcoder
-	if r.input == Alaw {
-		dec = DecodeAlaw
-		tr = Alaw2Ulaw
-	} else {
-		dec = DecodeUlaw
-		tr = Ulaw2Alaw
-	}
 	var i int
 	var err error
 	_, err = r.buf.ReadFrom(r.source)
@@ -125,7 +138,7 @@ func (r *Reader) Read(p []byte) (int, error) {
 			if err != nil {
 				break
 			}
-			decoded := dec(frame)
+			decoded := r.decode(frame)
 			p[i] = byte(decoded)
 			p[i+1] = byte(decoded >> 8)
 		}
@@ -135,7 +148,7 @@ func (r *Reader) Read(p []byte) (int, error) {
 			if err != nil {
 				break
 			}
-			p[i] = tr(frame)
+			p[i] = r.transcode(frame)
 		}
 	}
 	return i, err
@@ -146,25 +159,16 @@ func (r *Reader) Read(p []byte) (int, error) {
 // that caused the write to stop early.
 func (w *Writer) Write(p []byte) (int, error) {
 	var err, wrErr error
-	var enc encoder
-	var tr transcoder
-	if w.output == Alaw {
-		enc = EncodeAlaw
-		tr = Ulaw2Alaw
-	} else {
-		enc = EncodeUlaw
-		tr = Alaw2Ulaw
-	}
 	if w.input == Lpcm { // Encode LPCM data to G711
 		for i := 0; i <= len(p)-2; i = i + 2 {
-			wrErr = w.buf.WriteByte(enc(int16(p[i]) | int16(p[i+1])<<8))
+			wrErr = w.buf.WriteByte(w.encode(int16(p[i]) | int16(p[i+1])<<8))
 			if wrErr != nil {
 				break
 			}
 		}
 	} else { // Trans-code
 		for _, data := range p {
-			wrErr = w.buf.WriteByte(tr(data))
+			wrErr = w.buf.WriteByte(w.transcode(data))
 			if wrErr != nil {
 				break
 			}
