@@ -1,5 +1,5 @@
 # g711
-
+--
     import "github.com/zaf/g711"
 
 Package g711 implements encoding and decoding of G711.0 compressed sound data.
@@ -21,132 +21,125 @@ const (
 #### func  Alaw2Ulaw
 
 ```go
-func Alaw2Ulaw(pcm uint8) uint8
+func Alaw2Ulaw(alaw []byte) []byte
 ```
-Alaw2Ulaw performs direct A-law to u-law frame conversion
+Alaw2Ulaw performs direct A-law to u-law data conversion
 
 #### func  DecodeAlaw
 
 ```go
-func DecodeAlaw(pcm uint8) int16
+func DecodeAlaw(pcm []byte) []byte
 ```
-DecodeAlaw decodes an A-law PCM frame to 16bit LPCM
+DecodeAlaw decodes A-law PCM data to 16bit LPCM
 
 #### func  DecodeUlaw
 
 ```go
-func DecodeUlaw(pcm uint8) int16
+func DecodeUlaw(pcm []byte) []byte
 ```
-DecodeUlaw decodes a u-law PCM frame to 16bit LPCM
+DecodeUlaw decodes u-law PCM data to 16bit LPCM
 
 #### func  EncodeAlaw
 
 ```go
-func EncodeAlaw(lpcm int16) uint8
+func EncodeAlaw(lpcm []byte) []byte
 ```
-EncodeAlaw encodes a 16bit LPCM frame to G711 A-law PCM
+EncodeAlaw encodes 16bit LPCM data to G711 A-law PCM
 
 #### func  EncodeUlaw
 
 ```go
-func EncodeUlaw(lpcm int16) uint8
+func EncodeUlaw(lpcm []byte) []byte
 ```
-EncodeUlaw encodes a 16bit LPCM frame to G711 u-law PCM
+EncodeUlaw encodes 16bit LPCM data to G711 u-law PCM
 
 #### func  Ulaw2Alaw
 
 ```go
-func Ulaw2Alaw(pcm uint8) uint8
+func Ulaw2Alaw(ulaw []byte) []byte
 ```
-Ulaw2Alaw performs direct u-law to A-law frame conversion
+Ulaw2Alaw performs direct u-law to A-law data conversion
 
-#### type Reader
+#### type Decoder
 
 ```go
-type Reader struct {
+type Decoder struct {
 }
 ```
 
-Reader reads G711 PCM data and decodes it to 16bit LPCM or directly transcodes
-between A-law and u-law
+Decoder implements an io.Reader interface. It reads G711 PCM data and decodes it
+to 16bit LPCM
 
 #### func  NewAlawDecoder
 
 ```go
-func NewAlawDecoder(reader io.Reader, output int) (*Reader, error)
+func NewAlawDecoder(reader io.Reader) (*Decoder, error)
 ```
-NewAlawDecoder returns a pointer to a Reader that decodes or trans-codes A-law
-data. It takes as input the source data Reader and the output encoding fomrat.
+NewAlawDecoder returns a pointer to a Decoder. It takes as input the source data
+Reader.
 
 #### func  NewUlawDecoder
 
 ```go
-func NewUlawDecoder(reader io.Reader, output int) (*Reader, error)
+func NewUlawDecoder(reader io.Reader) (*Decoder, error)
 ```
-NewUlawDecoder returns a pointer to a Reader that decodes or trans-codes u-law
-data. It takes as input the source data Reader and the output encoding fomrat.
+NewUlawDecoder returns a pointer to a Decoder It takes as input the source data
+Reader.
 
-#### func (*Reader) Read
+#### func (*Decoder) Read
 
 ```go
-func (r *Reader) Read(p []byte) (int, error)
+func (r *Decoder) Read(p []byte) (int, error)
 ```
 Read decodes G711 data. Reads up to len(p) bytes into p, returns the number of
 bytes read and any error encountered.
 
-#### func (*Reader) Reset
+#### func (*Decoder) Reset
 
 ```go
-func (r *Reader) Reset(reader io.Reader)
+func (r *Decoder) Reset(reader io.Reader)
 ```
-Reset discards the Reader state. This permits reusing a Reader rather than
+Reset discards the Decoder state. This permits reusing a Decoder rather than
 allocating a new one.
 
-#### type Writer
+#### type Encoder
 
 ```go
-type Writer struct {
+type Encoder struct {
 }
 ```
 
-Writer encodes 16bit LPCM data to G711 PCM or directly transcodes between A-law
-and u-law
+Encoder implements an io.Writer interface. It encodes 16bit LPCM data to G711
+PCM or directly transcodes between A-law and u-law
 
 #### func  NewAlawEncoder
 
 ```go
-func NewAlawEncoder(writer io.Writer, input int) (*Writer, error)
+func NewAlawEncoder(writer io.Writer, input int) (*Encoder, error)
 ```
-NewAlawEncoder returns a pointer to a Writer that encodes data to A-law. It
-takes as input the destination data Writer and the input encoding fomrat.
+NewAlawEncoder returns a pointer to an Encoder. It takes as input the
+destination data Writer and the input encoding format.
 
 #### func  NewUlawEncoder
 
 ```go
-func NewUlawEncoder(writer io.Writer, input int) (*Writer, error)
+func NewUlawEncoder(writer io.Writer, input int) (*Encoder, error)
 ```
-NewUlawEncoder returns a pointer to a Writer that encodes data to u-law. It
-takes as input the destination data Writer and the input encoding fomrat.
+NewUlawEncoder returns a pointer to an Encoder. It takes as input the
+destination data Writer and the input encoding format.
 
-#### func (*Writer) Flush
+#### func (*Encoder) Reset
 
 ```go
-func (w *Writer) Flush() (err error)
+func (w *Encoder) Reset(writer io.Writer)
 ```
-Flush flushes any pending data to the underlying writer.
-
-#### func (*Writer) Reset
-
-```go
-func (w *Writer) Reset(writer io.Writer)
-```
-Reset discards the Writer state. This permits reusing a Writer rather than
+Reset discards the Encoder state. This permits reusing an Encoder rather than
 allocating a new one.
 
-#### func (*Writer) Write
+#### func (*Encoder) Write
 
 ```go
-func (w *Writer) Write(p []byte) (int, error)
+func (w *Encoder) Write(p []byte) (int, error)
 ```
 Write encodes G711 Data. Writes len(p) bytes from p to the underlying data
 stream, returns the number of bytes written from p (0 <= n <= len(p)) and any

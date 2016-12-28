@@ -89,44 +89,62 @@ var (
 	}
 )
 
-// EncodeAlaw encodes a 16bit LPCM frame to G711 A-law PCM
-func EncodeAlaw(lpcm int16) uint8 {
-	/*
-		The algorithm first stores off the sign. Then the code branches.
-		If the absolute value of the source sample is less than 256, the 16-bit sample is simply
-		shifted down 4 bits and converted to an 8-bit value, thus losing the top 4 bits in the process.
-		However, if it is more than 256, a logarithmic algorithm is applied to the sample to
-		determine the precision to keep. In that case, the sample is shifted down to access the
-		seven most significant bits of the sample. Those seven bits are then used to determine the
-		precision of the bottom 4 bits (segment). Finally, the top seven bits are shifted back up four bits
-		to make room for the bottom 4 bits. The two are then logically OR'd together to create the
-		eight bit compressed sample. The sign is then applied, and the entire compressed sample
-		is logically XOR'd for transmission.
-	*/
-	sign := ((^lpcm) >> 8) & 0x80
-	if sign == 0 {
-		lpcm = -lpcm
+// EncodeAlaw encodes 16bit LPCM data to G711 A-law PCM
+func EncodeAlaw(lpcm []byte) []byte {
+	if len(lpcm) < 2 {
+		return []byte{}
 	}
-	if lpcm > alawClip {
-		lpcm = alawClip
+	alaw := make([]byte, len(lpcm)/2)
+	for i, j := 0, 0; j < len(lpcm)-2; i, j = i+1, j+2 {
+		frame := int16(lpcm[j]) | int16(lpcm[j+1])<<8
+		/*
+			The algorithm first stores off the sign. Then the code branches.
+			If the absolute value of the source sample is less than 256, the 16-bit sample is simply
+			shifted down 4 bits and converted to an 8-bit value, thus losing the top 4 bits in the process.
+			However, if it is more than 256, a logarithmic algorithm is applied to the sample to
+			determine the precision to keep. In that case, the sample is shifted down to access the
+			seven most significant bits of the sample. Those seven bits are then used to determine the
+			precision of the bottom 4 bits (segment). Finally, the top seven bits are shifted back up four bits
+			to make room for the bottom 4 bits. The two are then logically OR'd together to create the
+			eight bit compressed sample. The sign is then applied, and the entire compressed sample
+			is logically XOR'd for transmission.
+		*/
+		sign := ((^frame) >> 8) & 0x80
+		if sign == 0 {
+			frame = -frame
+		}
+		if frame > alawClip {
+			frame = alawClip
+		}
+		var compressedByte uint8
+		if frame >= 256 {
+			segment := alawSegment[(frame>>8)&0x7F]
+			bottom := (frame >> (segment + 3)) & 0x0F
+			compressedByte = uint8(((int16(segment) << 4) | bottom))
+		} else {
+			compressedByte = uint8(frame >> 4)
+		}
+		alaw[i] = compressedByte ^ uint8(sign^0x55)
 	}
-	var compressedByte uint8
-	if lpcm >= 256 {
-		segment := alawSegment[(lpcm>>8)&0x7F]
-		bottom := (lpcm >> (segment + 3)) & 0x0F
-		compressedByte = uint8(((int16(segment) << 4) | bottom))
-	} else {
-		compressedByte = uint8(lpcm >> 4)
-	}
-	return compressedByte ^ uint8(sign^0x55)
+	return alaw
 }
 
-// DecodeAlaw decodes an A-law PCM frame to 16bit LPCM
-func DecodeAlaw(pcm uint8) int16 {
-	return alaw2lpcm[pcm]
+// DecodeAlaw decodes A-law PCM data to 16bit LPCM
+func DecodeAlaw(pcm []byte) []byte {
+	lpcm := make([]byte, len(pcm)*2)
+	for i, j := 0, 0; i < len(pcm); i, j = i+1, j+2 {
+		frame := alaw2lpcm[pcm[i]]
+		lpcm[j] = byte(frame)
+		lpcm[j+1] = byte(frame >> 8)
+	}
+	return lpcm
 }
 
-// Alaw2Ulaw performs direct A-law to u-law frame conversion
-func Alaw2Ulaw(pcm uint8) uint8 {
-	return alaw2ulaw[pcm]
+// Alaw2Ulaw performs direct A-law to u-law data conversion
+func Alaw2Ulaw(alaw []byte) []byte {
+	ulaw := make([]byte, len(alaw))
+	for i := 0; i < len(alaw); i++ {
+		ulaw[i] = alaw2ulaw[alaw[i]]
+	}
+	return ulaw
 }

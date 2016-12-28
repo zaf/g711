@@ -65,7 +65,7 @@ func TestEncode(t *testing.T) {
 	for _, tc := range TranscoderTest {
 		i, _ := utrans.Write(tc.data)
 		if i != tc.expected {
-			t.Errorf("ulaw Transcode via encoder: expected: %d , actual: %d", tc.expected, i)
+			t.Errorf("ulaw Transcode: expected: %d , actual: %d", tc.expected, i)
 		}
 	}
 }
@@ -73,7 +73,7 @@ func TestEncode(t *testing.T) {
 // Test Decoding
 func TestDecode(t *testing.T) {
 	b := new(bytes.Buffer)
-	adec, _ := NewAlawDecoder(b, Lpcm)
+	adec, _ := NewAlawDecoder(b)
 	for _, tc := range DecoderTest {
 		b.Write(tc.data)
 		p := make([]byte, 2*tc.expected)
@@ -83,23 +83,13 @@ func TestDecode(t *testing.T) {
 		}
 	}
 	b.Reset()
-	udec, _ := NewUlawDecoder(b, Lpcm)
+	udec, _ := NewUlawDecoder(b)
 	for _, tc := range DecoderTest {
 		b.Write(tc.data)
 		p := make([]byte, 2*tc.expected)
 		i, _ := udec.Read(p)
 		if i != tc.expected {
 			t.Errorf("ulaw Decode: expected: %d , actual: %d", tc.expected, i)
-		}
-	}
-	b.Reset()
-	utrans, _ := NewUlawDecoder(b, Alaw)
-	for _, tc := range TranscoderTest {
-		b.Write(tc.data)
-		p := make([]byte, 2*tc.expected)
-		i, _ := utrans.Read(p)
-		if i != tc.expected {
-			t.Errorf("ulaw Transcode via decoder: expected: %d , actual: %d", tc.expected, i)
 		}
 	}
 }
@@ -148,30 +138,8 @@ func BenchmarkUEncode(b *testing.B) {
 	}
 }
 
-// Benchmark transcoding g711 data via Reader
-func BenchmarkTranscodeR(b *testing.B) {
-	alawData, err := ioutil.ReadFile("testing/speech.alaw")
-	if err != nil {
-		log.Printf("Failed to read test data: %s\n", err)
-		b.FailNow()
-	}
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		transcoder, err := NewAlawDecoder(bytes.NewReader(alawData), Ulaw)
-		if err != nil {
-			log.Printf("Failed to create Reader: %s\n", err)
-			b.FailNow()
-		}
-		_, err = ioutil.ReadAll(transcoder)
-		if err != nil {
-			log.Printf("Transcoding failed: %s\n", err)
-			b.FailNow()
-		}
-	}
-}
-
-// Benchmark transcoding g711 data via Writer
-func BenchmarkTranscodeW(b *testing.B) {
+// Benchmark transcoding g711 data
+func BenchmarkTranscode(b *testing.B) {
 	alawData, err := ioutil.ReadFile("testing/speech.alaw")
 	if err != nil {
 		log.Printf("Failed to read test data: %s\n", err)
@@ -201,7 +169,7 @@ func BenchmarkUDecode(b *testing.B) {
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		decoder, err := NewUlawDecoder(bytes.NewReader(ulawData), Lpcm)
+		decoder, err := NewUlawDecoder(bytes.NewReader(ulawData))
 		if err != nil {
 			log.Printf("Failed to create Reader: %s\n", err)
 			b.FailNow()
@@ -223,7 +191,7 @@ func BenchmarkADecode(b *testing.B) {
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		decoder, err := NewAlawDecoder(bytes.NewReader(alawData), Lpcm)
+		decoder, err := NewAlawDecoder(bytes.NewReader(alawData))
 		if err != nil {
 			log.Printf("Failed to create Reader: %s\n", err)
 			b.FailNow()

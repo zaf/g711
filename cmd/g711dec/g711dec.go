@@ -48,14 +48,14 @@ func decodeG711(file string) error {
 	defer input.Close()
 
 	extension := strings.ToLower(filepath.Ext(file))
-	var decoder *g711.Reader
+	decoder := new(g711.Decoder)
 	if extension == ".alaw" || extension == ".al" {
-		decoder, err = g711.NewAlawDecoder(input, g711.Lpcm)
+		decoder, err = g711.NewAlawDecoder(input)
 		if err != nil {
 			return err
 		}
 	} else if extension == ".ulaw" || extension == ".ul" {
-		decoder, err = g711.NewUlawDecoder(input, g711.Lpcm)
+		decoder, err = g711.NewUlawDecoder(input)
 		if err != nil {
 			return err
 		}

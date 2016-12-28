@@ -92,37 +92,55 @@ var (
 	}
 )
 
-// EncodeUlaw encodes a 16bit LPCM frame to G711 u-law PCM
-func EncodeUlaw(lpcm int16) uint8 {
-	/*
-		The algorithm first stores off the sign. It then adds in a bias value
-		which (due to wrapping) will cause high valued samples to lose precision.
-		The top five most significant bits are pulled out of the sample.
-		Then, the bottom three bits of the compressed byte are generated using the
-		segment look-up table, based on the biased value of the source sample.
-		The 8-bit compressed sample is then finally created by logically OR'ing together
-		the 5 most important bits, the 3 lower bits, and the sign when applicable. The bits
-		are then logically NOT'ed for transmission.
-	*/
-	sign := (lpcm >> 8) & 0x80
-	if sign != 0 {
-		lpcm = -lpcm
+// EncodeUlaw encodes 16bit LPCM data to G711 u-law PCM
+func EncodeUlaw(lpcm []byte) []byte {
+	if len(lpcm) < 2 {
+		return []byte{}
 	}
-	if lpcm > uLawClip {
-		lpcm = uLawClip
+	ulaw := make([]byte, len(lpcm)/2)
+	for i, j := 0, 0; j < len(lpcm)-2; i, j = i+1, j+2 {
+		frame := int16(lpcm[j]) | int16(lpcm[j+1])<<8
+		/*
+			The algorithm first stores off the sign. It then adds in a bias value
+			which (due to wrapping) will cause high valued samples to lose precision.
+			The top five most significant bits are pulled out of the sample.
+			Then, the bottom three bits of the compressed byte are generated using the
+			segment look-up table, based on the biased value of the source sample.
+			The 8-bit compressed sample is then finally created by logically OR'ing together
+			the 5 most important bits, the 3 lower bits, and the sign when applicable. The bits
+			are then logically NOT'ed for transmission.
+		*/
+		sign := (frame >> 8) & 0x80
+		if sign != 0 {
+			frame = -frame
+		}
+		if frame > uLawClip {
+			frame = uLawClip
+		}
+		frame += uLawBias
+		segment := ulawSegment[(frame>>7)&0xFF]
+		bottom := (frame >> (segment + 3)) & 0x0F
+		ulaw[i] = uint8(^(sign | (int16(segment) << 4) | bottom))
 	}
-	lpcm += uLawBias
-	segment := ulawSegment[(lpcm>>7)&0xFF]
-	bottom := (lpcm >> (segment + 3)) & 0x0F
-	return uint8(^(sign | (int16(segment) << 4) | bottom))
+	return ulaw
 }
 
-// DecodeUlaw decodes a u-law PCM frame to 16bit LPCM
-func DecodeUlaw(pcm uint8) int16 {
-	return ulaw2lpcm[pcm]
+// DecodeUlaw decodes u-law PCM data to 16bit LPCM
+func DecodeUlaw(pcm []byte) []byte {
+	lpcm := make([]byte, len(pcm)*2)
+	for i, j := 0, 0; i < len(pcm); i, j = i+1, j+2 {
+		frame := ulaw2lpcm[pcm[i]]
+		lpcm[j] = byte(frame)
+		lpcm[j+1] = byte(frame >> 8)
+	}
+	return lpcm
 }
 
-// Ulaw2Alaw performs direct u-law to A-law frame conversion
-func Ulaw2Alaw(pcm uint8) uint8 {
-	return ulaw2alaw[pcm]
+// Ulaw2Alaw performs direct u-law to A-law data conversion
+func Ulaw2Alaw(ulaw []byte) []byte {
+	alaw := make([]byte, len(ulaw))
+	for i := 0; i < len(alaw); i++ {
+		alaw[i] = ulaw2alaw[ulaw[i]]
+	}
+	return ulaw
 }

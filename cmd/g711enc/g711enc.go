@@ -60,7 +60,7 @@ func encodeG711(file, format string) error {
 		return err
 	}
 	defer outFile.Close()
-	var encoder *g711.Writer
+	encoder := new(g711.Encoder)
 	if format == "alaw" {
 		encoder, err = g711.NewAlawEncoder(outFile, g711.Lpcm)
 		if err != nil {

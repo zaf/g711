@@ -26,9 +26,8 @@ func BenchmarkEncodeAlaw(b *testing.B) {
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		for i := 0; i <= len(rawData)-2; i = i + 2 {
-			EncodeAlaw(int16(rawData[i]) | int16(rawData[i+1])<<8)
-		}
+		EncodeAlaw(rawData)
+
 	}
 }
 
@@ -41,9 +40,7 @@ func BenchmarkDecodeAlaw(b *testing.B) {
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		for _, frame := range aData {
-			DecodeAlaw(frame)
-		}
+		DecodeAlaw(aData)
 	}
 }
 
@@ -56,8 +53,6 @@ func BenchmarkAlaw2Ulaw(b *testing.B) {
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		for _, frame := range aData {
-			Alaw2Ulaw(frame)
-		}
+		Alaw2Ulaw(aData)
 	}
 }
