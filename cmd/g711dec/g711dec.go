@@ -5,6 +5,8 @@
 	the BSD 3-Clause License. See the LICENSE file
 	at the top of the source tree.
 
+	g711dec decodes 8bit G711 PCM data to 16 Bit signed LPCM raw data
+
 */
 
 package main
@@ -62,7 +64,7 @@ func decodeG711(file string) error {
 		return err
 	}
 	outName := strings.TrimSuffix(file, filepath.Ext(file)) + ".raw"
-	outFile, err := os.OpenFile(outName, os.O_WRONLY|os.O_CREATE, 0664)
+	outFile, err := os.Create(outName)
 	if err != nil {
 		return err
 	}

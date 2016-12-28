@@ -5,6 +5,9 @@
 	the BSD 3-Clause License. See the LICENSE file
 	at the top of the source tree.
 
+	g711enc encodes 16bit 8kHz LPCM data to 8bit G711 PCM.
+	It works with wav or raw files as input.
+
 */
 
 package main
@@ -52,7 +55,7 @@ func encodeG711(file, format string) error {
 		return err
 	}
 	outName := strings.TrimSuffix(file, filepath.Ext(file)) + "." + format
-	outFile, err := os.OpenFile(outName, os.O_WRONLY|os.O_CREATE, 0664)
+	outFile, err := os.Create(outName)
 	if err != nil {
 		return err
 	}
