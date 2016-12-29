@@ -25,12 +25,26 @@ func Alaw2Ulaw(alaw []byte) []byte
 ```
 Alaw2Ulaw performs direct A-law to u-law data conversion
 
+#### func  Alaw2UlawFrame
+
+```go
+func Alaw2UlawFrame(frame uint8) uint8
+```
+Alaw2UlawFrame directly converts an A-law frame to u-law
+
 #### func  DecodeAlaw
 
 ```go
 func DecodeAlaw(pcm []byte) []byte
 ```
 DecodeAlaw decodes A-law PCM data to 16bit LPCM
+
+#### func  DecodeAlawFrame
+
+```go
+func DecodeAlawFrame(frame uint8) int16
+```
+DecodeAlawFrame decodes an A-law PCM frame to 16bit LPCM
 
 #### func  DecodeUlaw
 
@@ -39,12 +53,26 @@ func DecodeUlaw(pcm []byte) []byte
 ```
 DecodeUlaw decodes u-law PCM data to 16bit LPCM
 
+#### func  DecodeUlawFrame
+
+```go
+func DecodeUlawFrame(frame uint8) int16
+```
+DecodeUlawFrame decodes a u-law PCM frame to 16bit LPCM
+
 #### func  EncodeAlaw
 
 ```go
 func EncodeAlaw(lpcm []byte) []byte
 ```
 EncodeAlaw encodes 16bit LPCM data to G711 A-law PCM
+
+#### func  EncodeAlawFrame
+
+```go
+func EncodeAlawFrame(frame int16) uint8
+```
+EncodeAlawFrame encodes a 16bit LPCM frame to G711 A-law PCM
 
 #### func  EncodeUlaw
 
@@ -53,12 +81,26 @@ func EncodeUlaw(lpcm []byte) []byte
 ```
 EncodeUlaw encodes 16bit LPCM data to G711 u-law PCM
 
+#### func  EncodeUlawFrame
+
+```go
+func EncodeUlawFrame(frame int16) uint8
+```
+EncodeUlawFrame encodes a 16bit LPCM frame to G711 u-law PCM
+
 #### func  Ulaw2Alaw
 
 ```go
 func Ulaw2Alaw(ulaw []byte) []byte
 ```
 Ulaw2Alaw performs direct u-law to A-law data conversion
+
+#### func  Ulaw2UlawFrame
+
+```go
+func Ulaw2UlawFrame(frame uint8) uint8
+```
+Ulaw2UlawFrame directly converts a u-law frame to A-law
 
 #### type Decoder
 
@@ -68,7 +110,7 @@ type Decoder struct {
 ```
 
 Decoder implements an io.Reader interface. It reads G711 PCM data and decodes it
-to 16bit LPCM
+to 16bit 8000Hz LPCM
 
 #### func  NewAlawDecoder
 
@@ -109,8 +151,8 @@ type Encoder struct {
 }
 ```
 
-Encoder implements an io.Writer interface. It encodes 16bit LPCM data to G711
-PCM or directly transcodes between A-law and u-law
+Encoder implements an io.Writer interface. It encodes 16bit 8000Hz LPCM data to
+G711 PCM or directly transcodes between A-law and u-law
 
 #### func  NewAlawEncoder
 

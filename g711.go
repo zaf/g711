@@ -7,10 +7,10 @@
 */
 
 /*
-	Package g711 implements encoding and decoding of G711.0 compressed sound data.
-	G.711 is an ITU-T standard for audio companding.
+Package g711 implements encoding and decoding of G711.0 compressed sound data.
+G.711 is an ITU-T standard for audio companding.
 
-	For usage details please see the code snippets in the cmd folder.
+For usage details please see the code snippets in the cmd folder.
 */
 package g711
 
@@ -27,13 +27,13 @@ const (
 )
 
 // Decoder implements an io.Reader interface. It reads G711 PCM data and decodes
-// it to 16bit LPCM
+// it to 16bit 8000Hz LPCM
 type Decoder struct {
 	decode func([]byte) []byte // decoding function
 	source io.Reader           // source data
 }
 
-// Encoder implements an io.Writer interface. It encodes 16bit LPCM data to
+// Encoder implements an io.Writer interface. It encodes 16bit 8000Hz LPCM data to
 // G711 PCM or directly transcodes between A-law and u-law
 type Encoder struct {
 	input       int                 // input format
