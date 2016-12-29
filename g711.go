@@ -16,7 +16,6 @@ package g711
 
 import (
 	"errors"
-	"fmt"
 	"io"
 )
 
@@ -124,7 +123,7 @@ func (w *Encoder) Write(p []byte) (int, error) {
 	if w.input == Lpcm { // Encode LPCM data to G711
 		i, err = w.destination.Write(w.encode(p))
 		if err == nil && len(p)%2 != 0 {
-			err = fmt.Errorf("Odd number of LPCM bytes, incomplete frame")
+			err = errors.New("Odd number of LPCM bytes, incomplete frame")
 		}
 		i *= 2 // Report back the correct number of bytes written from p
 	} else { // Trans-code
