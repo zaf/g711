@@ -104,22 +104,24 @@ func (w *Encoder) Reset(writer io.Writer) {
 
 // Read decodes G711 data. Reads up to len(p) bytes into p, returns the number
 // of bytes read and any error encountered.
-func (r *Decoder) Read(p []byte) (int, error) {
-	var i int
-	var err error
+func (r *Decoder) Read(p []byte) (i int, err error) {
+	if len(p) == 0 {
+		return
+	}
 	b := make([]byte, len(p)/2)
 	i, err = r.source.Read(b)
 	copy(p, r.decode(b))
 	i *= 2 // Report back the correct number of bytes
-	return i, err
+	return
 }
 
 // Write encodes G711 Data. Writes len(p) bytes from p to the underlying data stream,
 // returns the number of bytes written from p (0 <= n <= len(p)) and any error encountered
 // that caused the write to stop early.
-func (w *Encoder) Write(p []byte) (int, error) {
-	var i int
-	var err error
+func (w *Encoder) Write(p []byte) (i int, err error) {
+	if len(p) == 0 {
+		return
+	}
 	if w.input == Lpcm { // Encode LPCM data to G711
 		i, err = w.destination.Write(w.encode(p))
 		if err == nil && len(p)%2 != 0 {
@@ -129,5 +131,5 @@ func (w *Encoder) Write(p []byte) (int, error) {
 	} else { // Trans-code
 		i, err = w.destination.Write(w.transcode(p))
 	}
-	return i, err
+	return
 }
