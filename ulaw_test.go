@@ -24,6 +24,7 @@ func BenchmarkEncodeUlaw(b *testing.B) {
 		log.Printf("Failed to read test data: %s\n", err)
 		b.FailNow()
 	}
+	b.SetBytes(int64(len(rawData)))
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		EncodeUlaw(rawData)
@@ -32,26 +33,28 @@ func BenchmarkEncodeUlaw(b *testing.B) {
 
 // Benchmark DecodeUlaw
 func BenchmarkDecodeUlaw(b *testing.B) {
-	aData, err := ioutil.ReadFile("testing/speech.ulaw")
+	uData, err := ioutil.ReadFile("testing/speech.ulaw")
 	if err != nil {
 		log.Printf("Failed to read test data: %s\n", err)
 		b.FailNow()
 	}
+	b.SetBytes(int64(len(uData)))
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		DecodeUlaw(aData)
+		DecodeUlaw(uData)
 	}
 }
 
 // Benchmark Ulaw2Alaw
 func BenchmarkUlaw2Alaw(b *testing.B) {
-	aData, err := ioutil.ReadFile("testing/speech.ulaw")
+	uData, err := ioutil.ReadFile("testing/speech.ulaw")
 	if err != nil {
 		log.Printf("Failed to read test data: %s\n", err)
 		b.FailNow()
 	}
+	b.SetBytes(int64(len(uData)))
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		Ulaw2Alaw(aData)
+		Ulaw2Alaw(uData)
 	}
 }

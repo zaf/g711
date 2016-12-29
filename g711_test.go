@@ -101,6 +101,7 @@ func BenchmarkAEncode(b *testing.B) {
 		log.Printf("Failed to read test data: %s\n", err)
 		b.FailNow()
 	}
+	b.SetBytes(int64(len(rawData)))
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		encoder, err := NewAlawEncoder(ioutil.Discard, Lpcm)
@@ -123,6 +124,7 @@ func BenchmarkUEncode(b *testing.B) {
 		log.Printf("Failed to read test data: %s\n", err)
 		b.FailNow()
 	}
+	b.SetBytes(int64(len(rawData)))
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		encoder, err := NewUlawEncoder(ioutil.Discard, Lpcm)
@@ -145,6 +147,7 @@ func BenchmarkTranscode(b *testing.B) {
 		log.Printf("Failed to read test data: %s\n", err)
 		b.FailNow()
 	}
+	b.SetBytes(int64(len(alawData)))
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		transcoder, err := NewAlawEncoder(ioutil.Discard, Ulaw)
@@ -167,6 +170,7 @@ func BenchmarkUDecode(b *testing.B) {
 		log.Printf("Failed to read test data: %s\n", err)
 		b.FailNow()
 	}
+	b.SetBytes(int64(len(ulawData)))
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		decoder, err := NewUlawDecoder(bytes.NewReader(ulawData))
@@ -189,6 +193,7 @@ func BenchmarkADecode(b *testing.B) {
 		log.Printf("Failed to read test data: %s\n", err)
 		b.FailNow()
 	}
+	b.SetBytes(int64(len(alawData)))
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		decoder, err := NewAlawDecoder(bytes.NewReader(alawData))
