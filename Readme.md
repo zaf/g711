@@ -95,12 +95,12 @@ func Ulaw2Alaw(ulaw []byte) []byte
 ```
 Ulaw2Alaw performs direct u-law to A-law data conversion
 
-#### func  Ulaw2UlawFrame
+#### func  Ulaw2AlawFrame
 
 ```go
-func Ulaw2UlawFrame(frame uint8) uint8
+func Ulaw2AlawFrame(frame uint8) uint8
 ```
-Ulaw2UlawFrame directly converts a u-law frame to A-law
+Ulaw2AlawFrame directly converts a u-law frame to A-law
 
 #### type Decoder
 

@@ -154,7 +154,7 @@ func Ulaw2Alaw(ulaw []byte) []byte {
 	return ulaw
 }
 
-// Ulaw2UlawFrame directly converts a u-law frame to A-law
-func Ulaw2UlawFrame(frame uint8) uint8 {
+// Ulaw2AlawFrame directly converts a u-law frame to A-law
+func Ulaw2AlawFrame(frame uint8) uint8 {
 	return ulaw2alaw[frame]
 }
