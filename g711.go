@@ -7,7 +7,7 @@
 */
 
 /*
-Package g711 implements encoding and decoding of G711.0 compressed sound data.
+Package g711 implements encoding and decoding of G711 PCM sound data.
 G.711 is an ITU-T standard for audio companding.
 
 For usage details please see the code snippets in the cmd folder.

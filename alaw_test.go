@@ -5,7 +5,7 @@
 	the BSD 3-Clause License. See the LICENSE file
 	at the top of the source tree.
 
-	Package g711 implements encoding and decoding of G711.0 compressed sound data.
+	Package g711 implements encoding and decoding of G711 PCM sound data.
 	G.711 is an ITU-T standard for audio companding.
 */
 

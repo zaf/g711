@@ -2,8 +2,8 @@
 --
     import "github.com/zaf/g711"
 
-Package g711 implements encoding and decoding of G711.0 compressed sound data.
-G.711 is an ITU-T standard for audio companding.
+Package g711 implements encoding and decoding of G711 PCM sound data. G.711 is
+an ITU-T standard for audio companding.
 
 For usage details please see the code snippets in the cmd folder.
 
@@ -131,7 +131,7 @@ Reader.
 #### func (*Decoder) Read
 
 ```go
-func (r *Decoder) Read(p []byte) (int, error)
+func (r *Decoder) Read(p []byte) (i int, err error)
 ```
 Read decodes G711 data. Reads up to len(p) bytes into p, returns the number of
 bytes read and any error encountered.
@@ -181,7 +181,7 @@ allocating a new one.
 #### func (*Encoder) Write
 
 ```go
-func (w *Encoder) Write(p []byte) (int, error)
+func (w *Encoder) Write(p []byte) (i int, err error)
 ```
 Write encodes G711 Data. Writes len(p) bytes from p to the underlying data
 stream, returns the number of bytes written from p (0 <= n <= len(p)) and any
