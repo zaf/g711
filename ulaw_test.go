@@ -13,7 +13,6 @@ package g711
 
 import (
 	"io/ioutil"
-	"log"
 	"testing"
 )
 
@@ -21,8 +20,7 @@ import (
 func BenchmarkEncodeUlaw(b *testing.B) {
 	rawData, err := ioutil.ReadFile("testing/speech.raw")
 	if err != nil {
-		log.Printf("Failed to read test data: %s\n", err)
-		b.FailNow()
+		b.Fatalf("Failed to read test data: %s\n", err)
 	}
 	b.SetBytes(int64(len(rawData)))
 	b.ResetTimer()
@@ -35,8 +33,7 @@ func BenchmarkEncodeUlaw(b *testing.B) {
 func BenchmarkDecodeUlaw(b *testing.B) {
 	uData, err := ioutil.ReadFile("testing/speech.ulaw")
 	if err != nil {
-		log.Printf("Failed to read test data: %s\n", err)
-		b.FailNow()
+		b.Fatalf("Failed to read test data: %s\n", err)
 	}
 	b.SetBytes(int64(len(uData)))
 	b.ResetTimer()
@@ -49,8 +46,7 @@ func BenchmarkDecodeUlaw(b *testing.B) {
 func BenchmarkUlaw2Alaw(b *testing.B) {
 	uData, err := ioutil.ReadFile("testing/speech.ulaw")
 	if err != nil {
-		log.Printf("Failed to read test data: %s\n", err)
-		b.FailNow()
+		b.Fatalf("Failed to read test data: %s\n", err)
 	}
 	b.SetBytes(int64(len(uData)))
 	b.ResetTimer()
