@@ -45,6 +45,9 @@ type Encoder struct {
 // NewAlawDecoder returns a pointer to a Decoder.
 // It takes as input the source data Reader.
 func NewAlawDecoder(reader io.Reader) (*Decoder, error) {
+	if reader == nil {
+		return nil, errors.New("io.Reader is nil")
+	}
 	r := Decoder{
 		decode: DecodeAlaw,
 		source: reader,
@@ -55,6 +58,9 @@ func NewAlawDecoder(reader io.Reader) (*Decoder, error) {
 // NewUlawDecoder returns a pointer to a Decoder
 // It takes as input the source data Reader.
 func NewUlawDecoder(reader io.Reader) (*Decoder, error) {
+	if reader == nil {
+		return nil, errors.New("io.Reader is nil")
+	}
 	r := Decoder{
 		decode: DecodeUlaw,
 		source: reader,
@@ -65,6 +71,9 @@ func NewUlawDecoder(reader io.Reader) (*Decoder, error) {
 // NewAlawEncoder returns a pointer to an Encoder.
 // It takes as input the destination data Writer and the input encoding format.
 func NewAlawEncoder(writer io.Writer, input int) (*Encoder, error) {
+	if writer == nil {
+		return nil, errors.New("io.Writer is nil")
+	}
 	if input != Ulaw && input != Lpcm {
 		return nil, errors.New("Invalid input format")
 	}
@@ -80,6 +89,9 @@ func NewAlawEncoder(writer io.Writer, input int) (*Encoder, error) {
 // NewUlawEncoder returns a pointer to an Encoder.
 // It takes as input the destination data Writer and the input encoding format.
 func NewUlawEncoder(writer io.Writer, input int) (*Encoder, error) {
+	if writer == nil {
+		return nil, errors.New("io.Writer is nil")
+	}
 	if input != Alaw && input != Lpcm {
 		return nil, errors.New("Invalid input format")
 	}
@@ -93,13 +105,21 @@ func NewUlawEncoder(writer io.Writer, input int) (*Encoder, error) {
 }
 
 // Reset discards the Decoder state. This permits reusing a Decoder rather than allocating a new one.
-func (r *Decoder) Reset(reader io.Reader) {
+func (r *Decoder) Reset(reader io.Reader) error {
+	if reader == nil {
+		return errors.New("io.Reader is nil")
+	}
 	r.source = reader
+	return nil
 }
 
 // Reset discards the Encoder state. This permits reusing an Encoder rather than allocating a new one.
-func (w *Encoder) Reset(writer io.Writer) {
+func (w *Encoder) Reset(writer io.Writer) error {
+	if writer == nil {
+		return errors.New("io.Writer is nil")
+	}
 	w.destination = writer
+	return nil
 }
 
 // Read decodes G711 data. Reads up to len(p) bytes into p, returns the number

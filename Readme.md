@@ -139,7 +139,7 @@ bytes read and any error encountered.
 #### func (*Decoder) Reset
 
 ```go
-func (r *Decoder) Reset(reader io.Reader)
+func (r *Decoder) Reset(reader io.Reader) error
 ```
 Reset discards the Decoder state. This permits reusing a Decoder rather than
 allocating a new one.
@@ -173,7 +173,7 @@ destination data Writer and the input encoding format.
 #### func (*Encoder) Reset
 
 ```go
-func (w *Encoder) Reset(writer io.Writer)
+func (w *Encoder) Reset(writer io.Writer) error
 ```
 Reset discards the Encoder state. This permits reusing an Encoder rather than
 allocating a new one.
