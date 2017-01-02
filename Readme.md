@@ -109,24 +109,23 @@ type Decoder struct {
 }
 ```
 
-Decoder implements an io.Reader interface. It reads G711 PCM data and decodes it
-to 16bit 8000Hz LPCM
+Decoder reads G711 PCM data and decodes it to 16bit 8000Hz LPCM
 
 #### func  NewAlawDecoder
 
 ```go
 func NewAlawDecoder(reader io.Reader) (*Decoder, error)
 ```
-NewAlawDecoder returns a pointer to a Decoder. It takes as input the source data
-Reader.
+NewAlawDecoder returns a pointer to a Decoder that implements an io.Reader. It
+takes as input the source data Reader.
 
 #### func  NewUlawDecoder
 
 ```go
 func NewUlawDecoder(reader io.Reader) (*Decoder, error)
 ```
-NewUlawDecoder returns a pointer to a Decoder It takes as input the source data
-Reader.
+NewUlawDecoder returns a pointer to a Decoder that implements an io.Reader. It
+takes as input the source data Reader.
 
 #### func (*Decoder) Read
 
@@ -151,24 +150,24 @@ type Encoder struct {
 }
 ```
 
-Encoder implements an io.Writer interface. It encodes 16bit 8000Hz LPCM data to
-G711 PCM or directly transcodes between A-law and u-law
+Encoder encodes 16bit 8000Hz LPCM data to G711 PCM or directly transcodes
+between A-law and u-law
 
 #### func  NewAlawEncoder
 
 ```go
 func NewAlawEncoder(writer io.Writer, input int) (*Encoder, error)
 ```
-NewAlawEncoder returns a pointer to an Encoder. It takes as input the
-destination data Writer and the input encoding format.
+NewAlawEncoder returns a pointer to an Encoder that implements an io.Writer. It
+takes as input the destination data Writer and the input encoding format.
 
 #### func  NewUlawEncoder
 
 ```go
 func NewUlawEncoder(writer io.Writer, input int) (*Encoder, error)
 ```
-NewUlawEncoder returns a pointer to an Encoder. It takes as input the
-destination data Writer and the input encoding format.
+NewUlawEncoder returns a pointer to an Encoder that implements an io.Writer. It
+takes as input the destination data Writer and the input encoding format.
 
 #### func (*Encoder) Reset
 

@@ -26,15 +26,14 @@ const (
 	Lpcm        // Lpcm 16bit signed linear data
 )
 
-// Decoder implements an io.Reader interface. It reads G711 PCM data and decodes
-// it to 16bit 8000Hz LPCM
+// Decoder reads G711 PCM data and decodes it to 16bit 8000Hz LPCM
 type Decoder struct {
 	decode func([]byte) []byte // decoding function
 	source io.Reader           // source data
 }
 
-// Encoder implements an io.Writer interface. It encodes 16bit 8000Hz LPCM data to
-// G711 PCM or directly transcodes between A-law and u-law
+// Encoder encodes 16bit 8000Hz LPCM data to G711 PCM or
+// directly transcodes between A-law and u-law
 type Encoder struct {
 	input       int                 // input format
 	encode      func([]byte) []byte // encoding function
@@ -42,7 +41,7 @@ type Encoder struct {
 	destination io.Writer           // output data
 }
 
-// NewAlawDecoder returns a pointer to a Decoder.
+// NewAlawDecoder returns a pointer to a Decoder that implements an io.Reader.
 // It takes as input the source data Reader.
 func NewAlawDecoder(reader io.Reader) (*Decoder, error) {
 	if reader == nil {
@@ -55,7 +54,7 @@ func NewAlawDecoder(reader io.Reader) (*Decoder, error) {
 	return &r, nil
 }
 
-// NewUlawDecoder returns a pointer to a Decoder
+// NewUlawDecoder returns a pointer to a Decoder that implements an io.Reader.
 // It takes as input the source data Reader.
 func NewUlawDecoder(reader io.Reader) (*Decoder, error) {
 	if reader == nil {
@@ -68,7 +67,7 @@ func NewUlawDecoder(reader io.Reader) (*Decoder, error) {
 	return &r, nil
 }
 
-// NewAlawEncoder returns a pointer to an Encoder.
+// NewAlawEncoder returns a pointer to an Encoder that implements an io.Writer.
 // It takes as input the destination data Writer and the input encoding format.
 func NewAlawEncoder(writer io.Writer, input int) (*Encoder, error) {
 	if writer == nil {
@@ -86,7 +85,7 @@ func NewAlawEncoder(writer io.Writer, input int) (*Encoder, error) {
 	return &w, nil
 }
 
-// NewUlawEncoder returns a pointer to an Encoder.
+// NewUlawEncoder returns a pointer to an Encoder that implements an io.Writer.
 // It takes as input the destination data Writer and the input encoding format.
 func NewUlawEncoder(writer io.Writer, input int) (*Encoder, error) {
 	if writer == nil {
