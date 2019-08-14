@@ -95,7 +95,7 @@ func EncodeAlaw(lpcm []byte) []byte {
 		return []byte{}
 	}
 	alaw := make([]byte, len(lpcm)/2)
-	for i, j := 0, 0; j < len(lpcm)-2; i, j = i+1, j+2 {
+	for i, j := 0, 0; j <= len(lpcm)-2; i, j = i+1, j+2 {
 		alaw[i] = EncodeAlawFrame(int16(lpcm[j]) | int16(lpcm[j+1])<<8)
 	}
 	return alaw
