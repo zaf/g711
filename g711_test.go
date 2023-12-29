@@ -14,7 +14,7 @@ package g711
 import (
 	"bytes"
 	"io"
-	"io/ioutil"
+	"os"
 	"testing"
 	"testing/iotest"
 )
@@ -51,21 +51,21 @@ var TranscoderTest = []struct {
 
 // Test Encoding
 func TestEncode(t *testing.T) {
-	aenc, _ := NewAlawEncoder(ioutil.Discard, Lpcm)
+	aenc, _ := NewAlawEncoder(io.Discard, Lpcm)
 	for _, tc := range EncoderTest {
 		i, _ := aenc.Write(tc.data)
 		if i != tc.expected {
 			t.Errorf("Alaw Encode: expected: %d , actual: %d", tc.expected, i)
 		}
 	}
-	uenc, _ := NewUlawEncoder(ioutil.Discard, Lpcm)
+	uenc, _ := NewUlawEncoder(io.Discard, Lpcm)
 	for _, tc := range EncoderTest {
 		i, _ := uenc.Write(tc.data)
 		if i != tc.expected {
 			t.Errorf("ulaw Encode: expected: %d , actual: %d", tc.expected, i)
 		}
 	}
-	utrans, _ := NewUlawEncoder(ioutil.Discard, Alaw)
+	utrans, _ := NewUlawEncoder(io.Discard, Alaw)
 	for _, tc := range TranscoderTest {
 		i, _ := utrans.Write(tc.data)
 		if i != tc.expected {
@@ -126,14 +126,14 @@ func TestDecode(t *testing.T) {
 
 // Benchmark Encoding data to Alaw
 func BenchmarkAEncode(b *testing.B) {
-	rawData, err := ioutil.ReadFile("testing/speech.raw")
+	rawData, err := os.ReadFile("testing/speech.raw")
 	if err != nil {
 		b.Fatalf("Failed to read test data: %s\n", err)
 	}
 	b.SetBytes(int64(len(rawData)))
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		encoder, err := NewAlawEncoder(ioutil.Discard, Lpcm)
+		encoder, err := NewAlawEncoder(io.Discard, Lpcm)
 		if err != nil {
 			b.Fatalf("Failed to create Writer: %s\n", err)
 		}
@@ -146,7 +146,7 @@ func BenchmarkAEncode(b *testing.B) {
 
 // Benchmark Encoding data to Ulaw
 func BenchmarkUEncode(b *testing.B) {
-	rawData, err := ioutil.ReadFile("testing/speech.raw")
+	rawData, err := os.ReadFile("testing/speech.raw")
 	if err != nil {
 		b.Fatalf("Failed to read test data: %s\n", err)
 
@@ -154,7 +154,7 @@ func BenchmarkUEncode(b *testing.B) {
 	b.SetBytes(int64(len(rawData)))
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		encoder, err := NewUlawEncoder(ioutil.Discard, Lpcm)
+		encoder, err := NewUlawEncoder(io.Discard, Lpcm)
 		if err != nil {
 			b.Fatalf("Failed to create Writer: %s\n", err)
 
@@ -169,7 +169,7 @@ func BenchmarkUEncode(b *testing.B) {
 
 // Benchmark transcoding g711 data
 func BenchmarkTranscode(b *testing.B) {
-	alawData, err := ioutil.ReadFile("testing/speech.alaw")
+	alawData, err := os.ReadFile("testing/speech.alaw")
 	if err != nil {
 		b.Fatalf("Failed to read test data: %s\n", err)
 
@@ -177,7 +177,7 @@ func BenchmarkTranscode(b *testing.B) {
 	b.SetBytes(int64(len(alawData)))
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		transcoder, err := NewAlawEncoder(ioutil.Discard, Ulaw)
+		transcoder, err := NewAlawEncoder(io.Discard, Ulaw)
 		if err != nil {
 			b.Fatalf("Failed to create Writer: %s\n", err)
 
@@ -192,7 +192,7 @@ func BenchmarkTranscode(b *testing.B) {
 
 // Benchmark Decoding Ulaw data
 func BenchmarkUDecode(b *testing.B) {
-	ulawData, err := ioutil.ReadFile("testing/speech.ulaw")
+	ulawData, err := os.ReadFile("testing/speech.ulaw")
 	if err != nil {
 		b.Fatalf("Failed to read test data: %s\n", err)
 
@@ -205,7 +205,7 @@ func BenchmarkUDecode(b *testing.B) {
 			b.Fatalf("Failed to create Reader: %s\n", err)
 
 		}
-		_, err = io.Copy(ioutil.Discard, decoder)
+		_, err = io.Copy(io.Discard, decoder)
 		if err != nil {
 			b.Fatalf("Decoding failed: %s\n", err)
 
@@ -215,7 +215,7 @@ func BenchmarkUDecode(b *testing.B) {
 
 // Benchmark Decoding Alaw data
 func BenchmarkADecode(b *testing.B) {
-	alawData, err := ioutil.ReadFile("testing/speech.alaw")
+	alawData, err := os.ReadFile("testing/speech.alaw")
 	if err != nil {
 		b.Fatalf("Failed to read test data: %s\n", err)
 
@@ -228,7 +228,7 @@ func BenchmarkADecode(b *testing.B) {
 			b.Fatalf("Failed to create Reader: %s\n", err)
 
 		}
-		_, err = io.Copy(ioutil.Discard, decoder)
+		_, err = io.Copy(io.Discard, decoder)
 		if err != nil {
 			b.Fatalf("Decoding failed: %s\n", err)
 

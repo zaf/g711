@@ -11,31 +11,14 @@
 
 package g711
 
+import "math/bits"
+
 const (
-	uLawBias = 0x84
-	uLawClip = 0x7F7B
+	ulawBias = 33
+	ulawClip = 0x1FFF
 )
 
 var (
-	// u-law quantization segment lookup table
-	ulawSegment = [256]uint8{
-		0, 0, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3,
-		4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
-		5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
-		5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
-		6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
-		6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
-		6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
-		6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
-		7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-		7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-		7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-		7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-		7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-		7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-		7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-		7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-	}
 	// u-law to LPCM conversion lookup table
 	ulaw2lpcm = [256]int16{
 		-32124, -31100, -30076, -29052, -28028, -27004, -25980, -24956,
@@ -75,20 +58,20 @@ var (
 	ulaw2alaw = [256]uint8{
 		42, 43, 40, 41, 46, 47, 44, 45, 34, 35, 32, 33, 38, 39, 36, 37,
 		58, 59, 56, 57, 62, 63, 60, 61, 50, 51, 48, 49, 54, 55, 52, 53,
-		10, 11, 8, 9, 14, 15, 12, 13, 2, 3, 0, 1, 6, 7, 4, 26,
-		27, 24, 25, 30, 31, 28, 29, 18, 19, 16, 17, 22, 23, 20, 21, 106,
-		104, 105, 110, 111, 108, 109, 98, 99, 96, 97, 102, 103, 100, 101, 122, 120,
+		11, 8, 9, 14, 15, 12, 13, 2, 3, 0, 1, 6, 7, 4, 5, 26,
+		27, 24, 25, 30, 31, 28, 29, 18, 19, 16, 17, 22, 23, 20, 21, 107,
+		104, 105, 110, 111, 108, 109, 98, 99, 96, 97, 102, 103, 100, 101, 123, 121,
 		126, 127, 124, 125, 114, 115, 112, 113, 118, 119, 116, 117, 75, 73, 79, 77,
 		66, 67, 64, 65, 70, 71, 68, 69, 90, 91, 88, 89, 94, 95, 92, 93,
-		82, 82, 83, 83, 80, 80, 81, 81, 86, 86, 87, 87, 84, 84, 85, 85,
+		82, 83, 83, 80, 80, 81, 81, 86, 86, 87, 87, 84, 84, 85, 85, 213,
 		170, 171, 168, 169, 174, 175, 172, 173, 162, 163, 160, 161, 166, 167, 164, 165,
 		186, 187, 184, 185, 190, 191, 188, 189, 178, 179, 176, 177, 182, 183, 180, 181,
-		138, 139, 136, 137, 142, 143, 140, 141, 130, 131, 128, 129, 134, 135, 132, 154,
-		155, 152, 153, 158, 159, 156, 157, 146, 147, 144, 145, 150, 151, 148, 149, 234,
-		232, 233, 238, 239, 236, 237, 226, 227, 224, 225, 230, 231, 228, 229, 250, 248,
+		139, 136, 137, 142, 143, 140, 141, 130, 131, 128, 129, 134, 135, 132, 133, 154,
+		155, 152, 153, 158, 159, 156, 157, 146, 147, 144, 145, 150, 151, 148, 149, 235,
+		232, 233, 238, 239, 236, 237, 226, 227, 224, 225, 230, 231, 228, 229, 251, 249,
 		254, 255, 252, 253, 242, 243, 240, 241, 246, 247, 244, 245, 203, 201, 207, 205,
 		194, 195, 192, 193, 198, 199, 196, 197, 218, 219, 216, 217, 222, 223, 220, 221,
-		210, 210, 211, 211, 208, 208, 209, 209, 214, 214, 215, 215, 212, 212, 213, 213,
+		210, 210, 211, 211, 208, 208, 209, 209, 214, 214, 215, 215, 212, 212, 213, 0,
 	}
 )
 
@@ -106,27 +89,18 @@ func EncodeUlaw(lpcm []byte) []byte {
 
 // EncodeUlawFrame encodes a 16bit LPCM frame to G711 u-law PCM
 func EncodeUlawFrame(frame int16) uint8 {
-	/*
-		The algorithm first stores off the sign. It then adds in a bias value
-		which (due to wrapping) will cause high valued samples to lose precision.
-		The top five most significant bits are pulled out of the sample.
-		Then, the bottom three bits of the compressed byte are generated using the
-		segment look-up table, based on the biased value of the source sample.
-		The 8-bit compressed sample is then finally created by logically OR'ing together
-		the 5 most important bits, the 3 lower bits, and the sign when applicable. The bits
-		are then logically NOT'ed for transmission.
-	*/
-	sign := (frame >> 8) & 0x80
-	if sign != 0 {
-		frame = -frame
+	var lowNibble, seg, sign int16
+	sign = ((^frame) >> 8) & 0x80
+	if sign == 0 {
+		frame = ^frame
 	}
-	if frame > uLawClip {
-		frame = uLawClip
+	frame = (frame >> 2) + ulawBias
+	if frame > ulawClip {
+		frame = ulawClip
 	}
-	frame += uLawBias
-	segment := ulawSegment[(frame>>7)&0xFF]
-	bottom := (frame >> (segment + 3)) & 0x0F
-	return uint8(^(sign | (int16(segment) << 4) | bottom))
+	seg = int16(16 - bits.LeadingZeros16(uint16(frame>>5)))
+	lowNibble = 0x000F - ((frame >> (seg)) & 0x000F)
+	return uint8(sign | ((8 - seg) << 4) | lowNibble)
 }
 
 // DecodeUlaw decodes u-law PCM data to 16bit LPCM

@@ -14,7 +14,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -44,14 +43,14 @@ func main() {
 }
 
 func encodeG711(file, format string) error {
-	input, err := ioutil.ReadFile(file)
+	input, err := os.ReadFile(file)
 	if err != nil {
 		return err
 	}
 
 	extension := strings.ToLower(filepath.Ext(file))
 	if extension != ".wav" && extension != ".raw" && extension != ".sln" {
-		err = fmt.Errorf("Unrecognised format for input file: %s", file)
+		err = fmt.Errorf("unrecognised format for input file: %s", file)
 		return err
 	}
 	outName := strings.TrimSuffix(file, filepath.Ext(file)) + "." + format

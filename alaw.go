@@ -11,28 +11,9 @@
 
 package g711
 
-const alawClip = 0x7F7B
+import "math/bits"
 
 var (
-	// A-law quantization segment lookup table
-	alawSegment = [128]uint8{
-		1, 1, 2, 2, 3, 3, 3, 3,
-		4, 4, 4, 4, 4, 4, 4, 4,
-		5, 5, 5, 5, 5, 5, 5, 5,
-		5, 5, 5, 5, 5, 5, 5, 5,
-		6, 6, 6, 6, 6, 6, 6, 6,
-		6, 6, 6, 6, 6, 6, 6, 6,
-		6, 6, 6, 6, 6, 6, 6, 6,
-		6, 6, 6, 6, 6, 6, 6, 6,
-		7, 7, 7, 7, 7, 7, 7, 7,
-		7, 7, 7, 7, 7, 7, 7, 7,
-		7, 7, 7, 7, 7, 7, 7, 7,
-		7, 7, 7, 7, 7, 7, 7, 7,
-		7, 7, 7, 7, 7, 7, 7, 7,
-		7, 7, 7, 7, 7, 7, 7, 7,
-		7, 7, 7, 7, 7, 7, 7, 7,
-		7, 7, 7, 7, 7, 7, 7, 7,
-	}
 	// A-law to LPCM conversion lookup table
 	alaw2lpcm = [256]int16{
 		-5504, -5248, -6016, -5760, -4480, -4224, -4992, -4736,
@@ -70,7 +51,7 @@ var (
 	}
 	// A-law to u-law conversion lookup table based on the ITU-T G.711 specification
 	alaw2ulaw = [256]uint8{
-		42, 43, 40, 41, 46, 47, 44, 45, 34, 35, 32, 33, 38, 39, 36, 37,
+		41, 42, 39, 40, 45, 46, 43, 44, 33, 34, 31, 32, 37, 38, 35, 36,
 		57, 58, 55, 56, 61, 62, 59, 60, 49, 50, 47, 48, 53, 54, 51, 52,
 		10, 11, 8, 9, 14, 15, 12, 13, 2, 3, 0, 1, 6, 7, 4, 5,
 		26, 27, 24, 25, 30, 31, 28, 29, 18, 19, 16, 17, 22, 23, 20, 21,
@@ -78,14 +59,14 @@ var (
 		116, 118, 112, 114, 124, 126, 120, 122, 106, 107, 104, 105, 110, 111, 108, 109,
 		72, 73, 70, 71, 76, 77, 74, 75, 64, 65, 63, 63, 68, 69, 66, 67,
 		86, 87, 84, 85, 90, 91, 88, 89, 79, 79, 78, 78, 82, 83, 80, 81,
-		170, 171, 168, 169, 174, 175, 172, 173, 162, 163, 160, 161, 166, 167, 164, 165,
+		169, 170, 167, 168, 173, 174, 171, 172, 161, 162, 159, 160, 165, 166, 163, 164,
 		185, 186, 183, 184, 189, 190, 187, 188, 177, 178, 175, 176, 181, 182, 179, 180,
 		138, 139, 136, 137, 142, 143, 140, 141, 130, 131, 128, 129, 134, 135, 132, 133,
 		154, 155, 152, 153, 158, 159, 156, 157, 146, 147, 144, 145, 150, 151, 148, 149,
 		226, 227, 224, 225, 230, 231, 228, 229, 221, 221, 220, 220, 223, 223, 222, 222,
 		244, 246, 240, 242, 252, 254, 248, 250, 234, 235, 232, 233, 238, 239, 236, 237,
 		200, 201, 198, 199, 204, 205, 202, 203, 192, 193, 191, 191, 196, 197, 194, 195,
-		214, 215, 212, 213, 218, 219, 216, 217, 207, 207, 206, 206, 210, 211, 208, 209,
+		214, 215, 212, 213, 218, 219, 216, 217, 207, 207, 206, 206, 210, 211, 208, 0,
 	}
 )
 
@@ -103,34 +84,19 @@ func EncodeAlaw(lpcm []byte) []byte {
 
 // EncodeAlawFrame encodes a 16bit LPCM frame to G711 A-law PCM
 func EncodeAlawFrame(frame int16) uint8 {
-	/*
-		The algorithm first stores off the sign. Then the code branches.
-		If the absolute value of the source sample is less than 256, the 16-bit sample is simply
-		shifted down 4 bits and converted to an 8-bit value, thus losing the top 4 bits in the process.
-		However, if it is more than 256, a logarithmic algorithm is applied to the sample to
-		determine the precision to keep. In that case, the sample is shifted down to access the
-		seven most significant bits of the sample. Those seven bits are then used to determine the
-		precision of the bottom 4 bits (segment). Finally, the top seven bits are shifted back up four bits
-		to make room for the bottom 4 bits. The two are then logically OR'd together to create the
-		eight bit compressed sample. The sign is then applied, and the entire compressed sample
-		is logically XOR'd for transmission.
-	*/
-	sign := ((^frame) >> 8) & 0x80
+	var compressedByte, seg, sign int16
+	sign = ((^frame) >> 8) & 0x80
 	if sign == 0 {
-		frame = -frame
+		frame = ^frame
 	}
-	if frame > alawClip {
-		frame = alawClip
+	compressedByte = frame >> 4
+	if compressedByte > 15 {
+		seg = int16(12 - bits.LeadingZeros16(uint16(compressedByte)))
+		compressedByte >>= seg - 1
+		compressedByte -= 16
+		compressedByte += seg << 4
 	}
-	var compressedByte uint8
-	if frame >= 256 {
-		segment := alawSegment[(frame>>8)&0x7F]
-		bottom := (frame >> (segment + 3)) & 0x0F
-		compressedByte = uint8(((int16(segment) << 4) | bottom))
-	} else {
-		compressedByte = uint8(frame >> 4)
-	}
-	return compressedByte ^ uint8(sign^0x55)
+	return uint8((sign | compressedByte) ^ 0x0055)
 }
 
 // DecodeAlaw decodes A-law PCM data to 16bit LPCM
