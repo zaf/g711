@@ -1,5 +1,5 @@
 /*
-	Copyright (C) 2016 - 2017, Lefteris Zafiris <zaf@fastmail.com>
+	Copyright (C) 2016 - 2024, Lefteris Zafiris <zaf@fastmail.com>
 
 	This program is free software, distributed under the terms of
 	the BSD 3-Clause License. See the LICENSE file
@@ -14,12 +14,15 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/zaf/g711"
 )
+
+const wavHeader = 44
 
 func main() {
 	if len(os.Args) < 3 || os.Args[1] == "help" || os.Args[1] == "--help" || (os.Args[1] != "ulaw" && os.Args[1] != "alaw") {
@@ -43,7 +46,7 @@ func main() {
 }
 
 func encodeG711(file, format string) error {
-	input, err := os.ReadFile(file)
+	input, err := os.Open(file)
 	if err != nil {
 		return err
 	}
@@ -72,9 +75,8 @@ func encodeG711(file, format string) error {
 		}
 	}
 	if extension == ".wav" {
-		_, err = encoder.Write(input[44:]) // Skip WAV header
-		return err
+		input.Seek(wavHeader, 0) // Skip wav header
 	}
-	_, err = encoder.Write(input)
+	_, err = io.Copy(encoder, input)
 	return err
 }

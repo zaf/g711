@@ -1,5 +1,4 @@
 # g711
---
     import "github.com/zaf/g711"
 
 Package g711 implements encoding and decoding of G711 PCM sound data. G.711 is
