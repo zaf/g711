@@ -12,11 +12,9 @@
 package g711
 
 import (
-	"bytes"
 	"io"
 	"os"
 	"testing"
-	"testing/iotest"
 )
 
 var EncoderTest = []struct {
@@ -35,10 +33,10 @@ var DecoderTest = []struct {
 	expected int
 }{
 	{[]byte{}, 0},
-	{[]byte{0x01}, 2},
-	{[]byte{0x01, 0x00}, 4},
-	{[]byte{0x01, 0x00, 0x7c, 0x7f, 0xd1, 0xd0, 0xd3, 0xd2, 0xdd, 0xdc, 0xdf, 0xde}, 24},
-	{[]byte{0x01, 0x00, 0xdc, 0x7f, 0xd1, 0xd0, 0xd3, 0xd2, 0xdd, 0xdc, 0xdf, 0xde, 0xd9}, 26},
+	{[]byte{0x01}, 1},
+	{[]byte{0x01, 0x00}, 2},
+	{[]byte{0x01, 0x00, 0x7c, 0x7f, 0xd1, 0xd0, 0xd3, 0xd2, 0xdd, 0xdc, 0xdf, 0xde}, 12},
+	{[]byte{0x01, 0x00, 0xdc, 0x7f, 0xd1, 0xd0, 0xd3, 0xd2, 0xdd, 0xdc, 0xdf, 0xde, 0xd9}, 13},
 }
 
 var TranscoderTest = []struct {
@@ -54,7 +52,7 @@ var TranscoderTest = []struct {
 
 // Test Encoding
 func TestEncode(t *testing.T) {
-	aenc, _ := NewAlawEncoder(io.Discard, Lpcm)
+	aenc, _ := NewCoder(io.Discard, Lpcm, Alaw)
 	for _, tc := range EncoderTest {
 		i, _ := aenc.Write(tc.data)
 		if i != tc.expected {
@@ -62,7 +60,7 @@ func TestEncode(t *testing.T) {
 		}
 	}
 	aenc.Close()
-	uenc, _ := NewUlawEncoder(io.Discard, Lpcm)
+	uenc, _ := NewCoder(io.Discard, Lpcm, Ulaw)
 	for _, tc := range EncoderTest {
 		i, _ := uenc.Write(tc.data)
 		if i != tc.expected {
@@ -70,7 +68,7 @@ func TestEncode(t *testing.T) {
 		}
 	}
 	uenc.Close()
-	utrans, _ := NewUlawEncoder(io.Discard, Alaw)
+	utrans, _ := NewCoder(io.Discard, Alaw, Ulaw)
 	for _, tc := range TranscoderTest {
 		i, _ := utrans.Write(tc.data)
 		if i != tc.expected {
@@ -82,50 +80,17 @@ func TestEncode(t *testing.T) {
 
 // Test Decoding
 func TestDecode(t *testing.T) {
-	b := new(bytes.Buffer)
-	adec, _ := NewAlawDecoder(b)
+	adec, _ := NewCoder(io.Discard, Alaw, Lpcm)
 	for _, tc := range DecoderTest {
-		b.Write(tc.data)
-		p := make([]byte, 16)
-		var err error
-		var i, n int
-		for err == nil {
-			n, err = adec.Read(p)
-			i += n
-		}
+		i, _ := adec.Write(tc.data)
 		if i != tc.expected {
 			t.Errorf("Alaw Decode: expected: %d , actual: %d", tc.expected, i)
 		}
 	}
 	adec.Close()
-	b.Reset()
-	udec, _ := NewUlawDecoder(b)
+	udec, _ := NewCoder(io.Discard, Ulaw, Lpcm)
 	for _, tc := range DecoderTest {
-		b.Write(tc.data)
-		p := make([]byte, 16)
-		var err error
-		var i, n int
-		for err == nil {
-			n, err = udec.Read(p)
-			i += n
-		}
-		if i != tc.expected {
-			t.Errorf("ulaw Decode: expected: %d , actual: %d", tc.expected, i)
-		}
-	}
-	udec.Close()
-	b.Reset()
-	// Edge Case
-	udec, _ = NewUlawDecoder(iotest.TimeoutReader(b))
-	for _, tc := range DecoderTest {
-		b.Write(tc.data)
-		p := make([]byte, 16)
-		var err error
-		var i, n int
-		for err == nil || err.Error() == "timeout" {
-			n, err = udec.Read(p)
-			i += n
-		}
+		i, _ := udec.Write(tc.data)
 		if i != tc.expected {
 			t.Errorf("ulaw Decode: expected: %d , actual: %d", tc.expected, i)
 		}
@@ -142,9 +107,9 @@ func BenchmarkAEncode(b *testing.B) {
 	b.SetBytes(int64(len(rawData)))
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		encoder, err := NewAlawEncoder(io.Discard, Lpcm)
+		encoder, err := NewCoder(io.Discard, Lpcm, Alaw)
 		if err != nil {
-			b.Fatalf("Failed to create Writer: %s\n", err)
+			b.Fatalf("Failed to create Encoder: %s\n", err)
 		}
 		_, err = encoder.Write(rawData)
 		if err != nil {
@@ -164,9 +129,9 @@ func BenchmarkUEncode(b *testing.B) {
 	b.SetBytes(int64(len(rawData)))
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		encoder, err := NewUlawEncoder(io.Discard, Lpcm)
+		encoder, err := NewCoder(io.Discard, Lpcm, Ulaw)
 		if err != nil {
-			b.Fatalf("Failed to create Writer: %s\n", err)
+			b.Fatalf("Failed to create Encoder: %s\n", err)
 
 		}
 		_, err = encoder.Write(rawData)
@@ -188,9 +153,9 @@ func BenchmarkTranscode(b *testing.B) {
 	b.SetBytes(int64(len(alawData)))
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		transcoder, err := NewAlawEncoder(io.Discard, Ulaw)
+		transcoder, err := NewCoder(io.Discard, Ulaw, Alaw)
 		if err != nil {
-			b.Fatalf("Failed to create Writer: %s\n", err)
+			b.Fatalf("Failed to create Transcoder: %s\n", err)
 
 		}
 		_, err = transcoder.Write(alawData)
@@ -212,12 +177,12 @@ func BenchmarkUDecode(b *testing.B) {
 	b.SetBytes(int64(len(ulawData)))
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		decoder, err := NewUlawDecoder(bytes.NewReader(ulawData))
+		decoder, err := NewCoder(io.Discard, Ulaw, Lpcm)
 		if err != nil {
 			b.Fatalf("Failed to create Reader: %s\n", err)
 
 		}
-		_, err = io.Copy(io.Discard, decoder)
+		_, err = decoder.Write(ulawData)
 		if err != nil {
 			b.Fatalf("Decoding failed: %s\n", err)
 
@@ -236,12 +201,12 @@ func BenchmarkADecode(b *testing.B) {
 	b.SetBytes(int64(len(alawData)))
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		decoder, err := NewAlawDecoder(bytes.NewReader(alawData))
+		decoder, err := NewCoder(io.Discard, Alaw, Lpcm)
 		if err != nil {
 			b.Fatalf("Failed to create Reader: %s\n", err)
 
 		}
-		_, err = io.Copy(io.Discard, decoder)
+		_, err = decoder.Write(alawData)
 		if err != nil {
 			b.Fatalf("Decoding failed: %s\n", err)
 

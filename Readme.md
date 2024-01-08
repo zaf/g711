@@ -3,99 +3,53 @@
 Package g711 implements encoding and decoding of G711 PCM sound data.
 G.711 is an ITU-T standard for audio companding.
 
-## Usage
-
-See code examples in `cmd/` folder.
+For usage details please see the code snippet in the cmd folder.
 
 ## Constants
 
 ```golang
 const (
     // Input and output formats
-    Alaw = iota // Alaw G711 encoded PCM data
-    Ulaw        // Ulaw G711  encoded PCM data
-    Lpcm        // Lpcm 16bit signed linear data
+    Alaw = iota + 1 // Alaw G711 encoded PCM data
+    Ulaw            // Ulaw G711  encoded PCM data
+    Lpcm            // Lpcm 16bit signed linear data
 )
 ```
+
 ## Types
 
-### type [Decoder](/g711.go#L30)
+### type [Coder](/g711.go#L32)
 
-`type Decoder struct { ... }`
+`type Coder struct { ... }`
 
-Decoder reads G711 PCM data and decodes it to 16bit 8000Hz LPCM
-
-#### func [NewAlawDecoder](/g711.go#L46)
-
-`func NewAlawDecoder(reader io.Reader) (*Decoder, error)`
-
-NewAlawDecoder returns a pointer to a Decoder that implements an io.Reader.
-It takes as input the source data Reader.
-
-#### func [NewUlawDecoder](/g711.go#L59)
-
-`func NewUlawDecoder(reader io.Reader) (*Decoder, error)`
-
-NewUlawDecoder returns a pointer to a Decoder that implements an io.Reader.
-It takes as input the source data Reader.
-
-#### func (*Decoder) [Close](/g711.go#L107)
-
-`func (r *Decoder) Close() error`
-
-Close closes the Decoder, it implements the io.Closer interface.
-
-#### func (*Decoder) [Read](/g711.go#L138)
-
-`func (r *Decoder) Read(p []byte) (i int, err error)`
-
-Read decodes G711 data. Reads up to len(p) bytes into p, returns the number
-of bytes read and any error encountered.
-
-#### func (*Decoder) [Reset](/g711.go#L119)
-
-`func (r *Decoder) Reset(reader io.Reader) error`
-
-Reset discards the Decoder state. This permits reusing a Decoder rather than allocating a new one.
-
-### type [Encoder](/g711.go#L37)
-
-`type Encoder struct { ... }`
-
-Encoder encodes 16bit 8000Hz LPCM data to G711 PCM or
+Coder encodes 16bit 8000Hz LPCM data to G711 PCM, or
+decodes G711 PCM data to 16bit 8000Hz LPCM data, or
 directly transcodes between A-law and u-law
 
-#### func [NewAlawEncoder](/g711.go#L72)
+#### func [NewCoder](/g711.go#L40)
 
-`func NewAlawEncoder(writer io.Writer, input int) (*Encoder, error)`
+`func NewCoder(writer io.Writer, input, output int) (*Coder, error)`
 
-NewAlawEncoder returns a pointer to an Encoder that implements an io.Writer.
-It takes as input the destination data Writer and the input encoding format.
+NewCoder returns a pointer to a Coder that implements an io.WriteCloser.
+It takes as input the destination data Writer and the input/output encoding formats.
 
-#### func [NewUlawEncoder](/g711.go#L90)
+#### func (*Coder) [Close](/g711.go#L90)
 
-`func NewUlawEncoder(writer io.Writer, input int) (*Encoder, error)`
-
-NewUlawEncoder returns a pointer to an Encoder that implements an io.Writer.
-It takes as input the destination data Writer and the input encoding format.
-
-#### func (*Encoder) [Close](/g711.go#L113)
-
-`func (w *Encoder) Close() error`
+`func (w *Coder) Close() error`
 
 Close closes the Encoder, it implements the io.Closer interface.
 
-#### func (*Encoder) [Reset](/g711.go#L128)
+#### func (*Coder) [Reset](/g711.go#L96)
 
-`func (w *Encoder) Reset(writer io.Writer) error`
+`func (w *Coder) Reset(writer io.Writer) error`
 
 Reset discards the Encoder state. This permits reusing an Encoder rather than allocating a new one.
 
-#### func (*Encoder) [Write](/g711.go#L152)
+#### func (*Coder) [Write](/g711.go#L107)
 
-`func (w *Encoder) Write(p []byte) (i int, err error)`
+`func (w *Coder) Write(p []byte) (int, error)`
 
-Write encodes G711 Data. Writes len(p) bytes from p to the underlying data stream,
+Write encodes/decodes/transcodes sound data. Writes len(p) bytes from p to the underlying data stream,
 returns the number of bytes written from p (0 <= n <= len(p)) and any error encountered
 that caused the write to stop early.
 
