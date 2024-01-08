@@ -77,20 +77,16 @@ var (
 
 // EncodeUlaw encodes 16bit LPCM data to G711 u-law PCM
 func EncodeUlaw(lpcm []byte) []byte {
-	if len(lpcm) < 2 {
-		return []byte{}
-	}
-	ulaw := make([]byte, len(lpcm)/2)
-	for i, j := 0, 0; j <= len(lpcm)-2; i, j = i+1, j+2 {
-		ulaw[i] = EncodeUlawFrame(int16(lpcm[j]) | int16(lpcm[j+1])<<8)
+	ulaw := make([]byte, len(lpcm)>>1)
+	for i := 0; i < len(lpcm)-1; i += 2 {
+		ulaw[i>>1] = EncodeUlawFrame(int16(lpcm[i]) | int16(lpcm[i+1])<<8)
 	}
 	return ulaw
 }
 
 // EncodeUlawFrame encodes a 16bit LPCM frame to G711 u-law PCM
 func EncodeUlawFrame(frame int16) uint8 {
-	var lowNibble, seg, sign int16
-	sign = ((^frame) >> 8) & 0x80
+	sign := ((^frame) >> 8) & 0x80
 	if sign == 0 {
 		frame = ^frame
 	}
@@ -98,18 +94,18 @@ func EncodeUlawFrame(frame int16) uint8 {
 	if frame > ulawClip {
 		frame = ulawClip
 	}
-	seg = int16(16 - bits.LeadingZeros16(uint16(frame>>5)))
-	lowNibble = 0x000F - ((frame >> (seg)) & 0x000F)
+	seg := int16(16 - bits.LeadingZeros16(uint16(frame>>5)))
+	lowNibble := 0x000F - ((frame >> (seg)) & 0x000F)
 	return uint8(sign | ((8 - seg) << 4) | lowNibble)
 }
 
 // DecodeUlaw decodes u-law PCM data to 16bit LPCM
 func DecodeUlaw(pcm []byte) []byte {
 	lpcm := make([]byte, len(pcm)*2)
-	for i, j := 0, 0; i < len(pcm); i, j = i+1, j+2 {
+	for i := 0; i < len(pcm); i++ {
 		frame := ulaw2lpcm[pcm[i]]
-		lpcm[j] = byte(frame)
-		lpcm[j+1] = byte(frame >> 8)
+		lpcm[i*2] = byte(frame)
+		lpcm[i*2+1] = byte(frame >> 8)
 	}
 	return lpcm
 }
