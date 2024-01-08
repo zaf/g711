@@ -61,6 +61,7 @@ func TestEncode(t *testing.T) {
 			t.Errorf("Alaw Encode: expected: %d , actual: %d", tc.expected, i)
 		}
 	}
+	aenc.Close()
 	uenc, _ := NewUlawEncoder(io.Discard, Lpcm)
 	for _, tc := range EncoderTest {
 		i, _ := uenc.Write(tc.data)
@@ -68,6 +69,7 @@ func TestEncode(t *testing.T) {
 			t.Errorf("ulaw Encode: expected: %d , actual: %d", tc.expected, i)
 		}
 	}
+	uenc.Close()
 	utrans, _ := NewUlawEncoder(io.Discard, Alaw)
 	for _, tc := range TranscoderTest {
 		i, _ := utrans.Write(tc.data)
@@ -75,6 +77,7 @@ func TestEncode(t *testing.T) {
 			t.Errorf("ulaw Transcode: expected: %d , actual: %d", tc.expected, i)
 		}
 	}
+	utrans.Close()
 }
 
 // Test Decoding
@@ -94,6 +97,7 @@ func TestDecode(t *testing.T) {
 			t.Errorf("Alaw Decode: expected: %d , actual: %d", tc.expected, i)
 		}
 	}
+	adec.Close()
 	b.Reset()
 	udec, _ := NewUlawDecoder(b)
 	for _, tc := range DecoderTest {
@@ -109,6 +113,7 @@ func TestDecode(t *testing.T) {
 			t.Errorf("ulaw Decode: expected: %d , actual: %d", tc.expected, i)
 		}
 	}
+	udec.Close()
 	b.Reset()
 	// Edge Case
 	udec, _ = NewUlawDecoder(iotest.TimeoutReader(b))
@@ -125,6 +130,7 @@ func TestDecode(t *testing.T) {
 			t.Errorf("ulaw Decode: expected: %d , actual: %d", tc.expected, i)
 		}
 	}
+	udec.Close()
 }
 
 // Benchmark Encoding data to Alaw
@@ -144,6 +150,7 @@ func BenchmarkAEncode(b *testing.B) {
 		if err != nil {
 			b.Fatalf("Encoding failed: %s\n", err)
 		}
+		encoder.Close()
 	}
 }
 
@@ -167,6 +174,7 @@ func BenchmarkUEncode(b *testing.B) {
 			b.Fatalf("Encoding failed: %s\n", err)
 
 		}
+		encoder.Close()
 	}
 }
 
@@ -190,6 +198,7 @@ func BenchmarkTranscode(b *testing.B) {
 			b.Fatalf("Transcoding failed: %s\n", err)
 
 		}
+		transcoder.Close()
 	}
 }
 
@@ -213,6 +222,7 @@ func BenchmarkUDecode(b *testing.B) {
 			b.Fatalf("Decoding failed: %s\n", err)
 
 		}
+		decoder.Close()
 	}
 }
 
@@ -236,5 +246,6 @@ func BenchmarkADecode(b *testing.B) {
 			b.Fatalf("Decoding failed: %s\n", err)
 
 		}
+		decoder.Close()
 	}
 }

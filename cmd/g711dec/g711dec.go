@@ -63,6 +63,7 @@ func decodeG711(file string) error {
 		err = fmt.Errorf("unrecognised format for file: %s", file)
 		return err
 	}
+	defer decoder.Close()
 	outName := strings.TrimSuffix(file, filepath.Ext(file)) + ".raw"
 	outFile, err := os.Create(outName)
 	if err != nil {

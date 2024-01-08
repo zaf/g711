@@ -74,6 +74,7 @@ func encodeG711(file, format string) error {
 			return err
 		}
 	}
+	defer encoder.Close()
 	if extension == ".wav" {
 		input.Seek(wavHeader, 0) // Skip wav header
 	}

@@ -103,6 +103,18 @@ func NewUlawEncoder(writer io.Writer, input int) (*Encoder, error) {
 	return &w, nil
 }
 
+// Close closes the Decoder, it implements the io.Closer interface.
+func (r *Decoder) Close() error {
+	r = nil
+	return nil
+}
+
+// Close closes the Encoder, it implements the io.Closer interface.
+func (w *Encoder) Close() error {
+	w = nil
+	return nil
+}
+
 // Reset discards the Decoder state. This permits reusing a Decoder rather than allocating a new one.
 func (r *Decoder) Reset(reader io.Reader) error {
 	if reader == nil {
