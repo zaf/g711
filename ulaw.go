@@ -121,7 +121,7 @@ func Ulaw2Alaw(ulaw []byte) []byte {
 	for i := 0; i < len(alaw); i++ {
 		alaw[i] = ulaw2alaw[ulaw[i]]
 	}
-	return ulaw
+	return alaw
 }
 
 // Ulaw2AlawFrame directly converts a u-law frame to A-law
