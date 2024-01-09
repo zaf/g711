@@ -88,12 +88,18 @@ func NewCoder(writer io.Writer, input, output int) (*Coder, error) {
 
 // Close closes the Encoder, it implements the io.Closer interface.
 func (w *Coder) Close() error {
+	w.destination = nil
+	w.translate = nil
+	w.multiplier = 0
 	w = nil
 	return nil
 }
 
 // Reset discards the Encoder state. This permits reusing an Encoder rather than allocating a new one.
 func (w *Coder) Reset(writer io.Writer) error {
+	if w == nil || w.translate == nil || w.destination == nil {
+		return errors.New("coder is uninitialized or closed")
+	}
 	if writer == nil {
 		return errors.New("io.Writer is nil")
 	}

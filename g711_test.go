@@ -12,10 +12,64 @@
 package g711
 
 import (
+	"bytes"
 	"io"
 	"os"
 	"testing"
 )
+
+func TestNewCoder(t *testing.T) {
+	writer := bytes.NewBuffer([]byte{})
+	input := Lpcm
+	output := Alaw
+	// Test case: Valid input
+	coder, err := NewCoder(writer, input, output)
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+	if coder == nil {
+		t.Error("Expected coder to not be nil")
+	}
+	// Test case: Nil writer
+	_, err = NewCoder(nil, input, output)
+	if err == nil {
+		t.Error("Expected error, got nil")
+	}
+	// Test case: Invalid input format
+	_, err = NewCoder(writer, 999, output)
+	if err == nil {
+		t.Error("Expected error, got nil")
+	}
+	// Test case: Invalid output format
+	_, err = NewCoder(writer, input, 999)
+	if err == nil {
+		t.Error("Expected error, got nil")
+	}
+}
+
+func TestReset(t *testing.T) {
+	// Test case 1: Coder is not nil, writer is not nil
+	w, _ := NewCoder(io.Discard, Lpcm, Alaw)
+	writer := bytes.NewBufferString("")
+	err := w.Reset(writer)
+	if err != nil {
+		t.Errorf("Expected no error, but got: %v", err)
+	}
+	w.Close()
+	// Test case 2: Coder is nil
+	nilCoder, _ := NewCoder(io.Discard, Lpcm, Alaw)
+	nilCoder.Close()
+	err = nilCoder.Reset(writer)
+	if err == nil || err.Error() != "coder is uninitialized or closed" {
+		t.Errorf("Expected error: 'coder is uninitialized or closed', but got: %v", err)
+	}
+	// Test case 3: writer is nil
+	w, _ = NewCoder(io.Discard, Lpcm, Alaw)
+	err = w.Reset(nil)
+	if err == nil || err.Error() != "io.Writer is nil" {
+		t.Errorf("Expected error: 'io.Writer is nil', but got: %v", err)
+	}
+}
 
 var EncoderTest = []struct {
 	data     []byte
