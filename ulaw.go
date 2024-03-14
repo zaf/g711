@@ -81,10 +81,39 @@ func EncodeUlaw(lpcm []byte) []byte {
 		return []byte{}
 	}
 	ulaw := make([]byte, len(lpcm)/2)
-	for i, j := 0, 0; j <= len(lpcm)-2; i, j = i+1, j+2 {
-		ulaw[i] = EncodeUlawFrame(int16(lpcm[j]) | int16(lpcm[j+1])<<8)
+	n := EncodeUlawTo(ulaw, lpcm)
+	return ulaw[:n]
+}
+
+// EncodeUlawTo encodes 16bit LPCM data to an existing G711 u-law PCM buffer.
+// It panics if the buffer is too small. Returns a number of samples written.
+func EncodeUlawTo(out []byte, lpcm []byte) int {
+	if len(out) < len(lpcm)/2 {
+		panic("short buffer")
 	}
-	return ulaw
+	for i, j := 0, 0; j <= len(lpcm)-2; i, j = i+1, j+2 {
+		out[i] = EncodeUlawFrame(int16(lpcm[j]) | int16(lpcm[j+1])<<8)
+	}
+	return len(lpcm) / 2
+}
+
+// EncodeUlaw16 encodes 16bit LPCM data to G711 u-law PCM
+func EncodeUlaw16(lpcm []int16) []byte {
+	out := make([]byte, len(lpcm))
+	n := EncodeUlaw16To(out, lpcm)
+	return out[:n]
+}
+
+// EncodeUlaw16To encodes 16bit LPCM data to an existing G711 u-law PCM buffer.
+// It panics if the buffer is too small. Returns a number of samples written.
+func EncodeUlaw16To(out []byte, lpcm []int16) int {
+	if len(out) < len(lpcm) {
+		panic("short buffer")
+	}
+	for i := range lpcm {
+		out[i] = EncodeUlawFrame(lpcm[i])
+	}
+	return len(lpcm)
 }
 
 // EncodeUlawFrame encodes a 16bit LPCM frame to G711 u-law PCM
@@ -104,14 +133,43 @@ func EncodeUlawFrame(frame int16) uint8 {
 }
 
 // DecodeUlaw decodes u-law PCM data to 16bit LPCM
-func DecodeUlaw(pcm []byte) []byte {
-	lpcm := make([]byte, len(pcm)*2)
-	for i, j := 0, 0; i < len(pcm); i, j = i+1, j+2 {
-		frame := ulaw2lpcm[pcm[i]]
-		lpcm[j] = byte(frame)
-		lpcm[j+1] = byte(frame >> 8)
+func DecodeUlaw(ulaw []byte) []byte {
+	lpcm := make([]byte, len(ulaw)*2)
+	n := DecodeUlawTo(lpcm, ulaw)
+	return lpcm[:n]
+}
+
+// DecodeUlawTo decodes u-law PCM data to an existing 16bit LPCM buffer.
+// It panics if the buffer is too small. Returns a number of samples written.
+func DecodeUlawTo(out []byte, ulaw []byte) int {
+	if len(out) < len(ulaw)*2 {
+		panic("short buffer")
 	}
-	return lpcm
+	for i, j := 0, 0; i < len(ulaw); i, j = i+1, j+2 {
+		frame := ulaw2lpcm[ulaw[i]]
+		out[j] = byte(frame)
+		out[j+1] = byte(frame >> 8)
+	}
+	return len(ulaw) * 2
+}
+
+// DecodeUlaw16 decodes u-law PCM data to 16bit LPCM.
+func DecodeUlaw16(ulaw []byte) []int16 {
+	out := make([]int16, len(ulaw))
+	n := DecodeUlaw16To(out, ulaw)
+	return out[:n]
+}
+
+// DecodeUlaw16To decodes u-law PCM data to an existing 16bit LPCM buffer.
+// It panics if the buffer is too small. Returns a number of samples written.
+func DecodeUlaw16To(out []int16, ulaw []byte) int {
+	if len(out) < len(ulaw) {
+		panic("short buffer")
+	}
+	for i := 0; i < len(ulaw); i++ {
+		out[i] = ulaw2lpcm[ulaw[i]]
+	}
+	return len(ulaw)
 }
 
 // DecodeUlawFrame decodes a u-law PCM frame to 16bit LPCM
