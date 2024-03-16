@@ -32,8 +32,14 @@ const (
 type Coder struct {
 	translate   func([]byte) []byte // enc/decoding function
 	destination io.Writer           // output data
-	multiplier  float64
+	written     int8                // reported written size
 }
+
+const (
+	// written parameters
+	double = iota + 1
+	half
+)
 
 // NewCoder returns a pointer to a Coder that implements an io.WriteCloser.
 // It takes as input the destination data Writer and the input/output encoding formats.
@@ -42,16 +48,16 @@ func NewCoder(writer io.Writer, input, output int) (*Coder, error) {
 		return nil, errors.New("io.Writer is nil")
 	}
 	var translate func([]byte) []byte
-	multiplier := 1.0
+	var written int8
 	switch input {
 	case Lpcm:
 		switch output {
 		case Alaw:
 			translate = EncodeAlaw
-			multiplier = 2
+			written = double
 		case Ulaw:
 			translate = EncodeUlaw
-			multiplier = 2
+			written = double
 		default:
 			return nil, errors.New("invalid output format")
 		}
@@ -59,7 +65,7 @@ func NewCoder(writer io.Writer, input, output int) (*Coder, error) {
 		switch output {
 		case Lpcm:
 			translate = DecodeAlaw
-			multiplier = 0.5
+			written = half
 		case Ulaw:
 			translate = Alaw2Ulaw
 		default:
@@ -69,7 +75,7 @@ func NewCoder(writer io.Writer, input, output int) (*Coder, error) {
 		switch output {
 		case Lpcm:
 			translate = DecodeUlaw
-			multiplier = 0.5
+			written = half
 		case Alaw:
 			translate = Ulaw2Alaw
 		default:
@@ -81,7 +87,7 @@ func NewCoder(writer io.Writer, input, output int) (*Coder, error) {
 	w := Coder{
 		translate:   translate,
 		destination: writer,
-		multiplier:  multiplier,
+		written:     written,
 	}
 	return &w, nil
 }
@@ -90,7 +96,7 @@ func NewCoder(writer io.Writer, input, output int) (*Coder, error) {
 func (w *Coder) Close() error {
 	w.destination = nil
 	w.translate = nil
-	w.multiplier = 0
+	w.written = 0
 	w = nil
 	return nil
 }
@@ -118,6 +124,11 @@ func (w *Coder) Write(p []byte) (int, error) {
 	// If we are encoding to g711 we need to multiply the number of bytes written by 2 to avoid reporting short writes
 	// this happens because 2 bytes of input data are encoded to 1 byte of output data.
 	// In a similar manner if we are decoding from g711 we need to divide the number of bytes written by 2.
-	i = int(float64(i) * w.multiplier)
+	switch {
+	case w.written == double:
+		i <<= 1
+	case w.written == half:
+		i >>= 1
+	}
 	return i, err
 }
