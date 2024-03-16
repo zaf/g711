@@ -72,26 +72,22 @@ var (
 
 // EncodeAlaw encodes 16bit LPCM data to G711 A-law PCM
 func EncodeAlaw(lpcm []byte) []byte {
-	if len(lpcm) < 2 {
-		return []byte{}
-	}
-	alaw := make([]byte, len(lpcm)/2)
-	for i, j := 0, 0; j <= len(lpcm)-2; i, j = i+1, j+2 {
-		alaw[i] = EncodeAlawFrame(int16(lpcm[j]) | int16(lpcm[j+1])<<8)
+	alaw := make([]byte, len(lpcm)>>1)
+	for i := 0; i < len(lpcm)-1; i += 2 {
+		alaw[i>>1] = EncodeAlawFrame(int16(lpcm[i]) | int16(lpcm[i+1])<<8)
 	}
 	return alaw
 }
 
 // EncodeAlawFrame encodes a 16bit LPCM frame to G711 A-law PCM
 func EncodeAlawFrame(frame int16) uint8 {
-	var compressedByte, seg, sign int16
-	sign = ((^frame) >> 8) & 0x80
+	sign := ((^frame) >> 8) & 0x80
 	if sign == 0 {
 		frame = ^frame
 	}
-	compressedByte = frame >> 4
+	compressedByte := frame >> 4
 	if compressedByte > 15 {
-		seg = int16(12 - bits.LeadingZeros16(uint16(compressedByte)))
+		seg := int16(12 - bits.LeadingZeros16(uint16(compressedByte)))
 		compressedByte >>= seg - 1
 		compressedByte -= 16
 		compressedByte += seg << 4
@@ -102,10 +98,10 @@ func EncodeAlawFrame(frame int16) uint8 {
 // DecodeAlaw decodes A-law PCM data to 16bit LPCM
 func DecodeAlaw(pcm []byte) []byte {
 	lpcm := make([]byte, len(pcm)*2)
-	for i, j := 0, 0; i < len(pcm); i, j = i+1, j+2 {
+	for i := 0; i < len(pcm); i++ {
 		frame := alaw2lpcm[pcm[i]]
-		lpcm[j] = byte(frame)
-		lpcm[j+1] = byte(frame >> 8)
+		lpcm[i*2] = byte(frame)
+		lpcm[i*2+1] = byte(frame >> 8)
 	}
 	return lpcm
 }
