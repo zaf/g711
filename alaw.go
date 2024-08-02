@@ -92,7 +92,7 @@ func EncodeAlawFrame(frame int16) uint8 {
 	compressedByte = frame >> 4
 	if compressedByte > 15 {
 		seg = int16(12 - bits.LeadingZeros16(uint16(compressedByte)))
-		compressedByte >>= seg - 1
+		compressedByte >>= uint(seg - 1)
 		compressedByte -= 16
 		compressedByte += seg << 4
 	}

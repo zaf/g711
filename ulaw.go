@@ -99,7 +99,7 @@ func EncodeUlawFrame(frame int16) uint8 {
 		frame = ulawClip
 	}
 	seg = int16(16 - bits.LeadingZeros16(uint16(frame>>5)))
-	lowNibble = 0x000F - ((frame >> (seg)) & 0x000F)
+	lowNibble = 0x000F - ((frame >> uint(seg)) & 0x000F)
 	return uint8(sign | ((8 - seg) << 4) | lowNibble)
 }
 
