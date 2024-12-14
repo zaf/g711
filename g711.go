@@ -10,6 +10,9 @@
 Package g711 implements encoding and decoding of G711 PCM sound data.
 G.711 is an ITU-T standard for audio companding.
 
+The package exposes a high level API for encoding and decoding through
+an io.WriteCloser. But also a low level API using preallocated buffers
+for cases where performance and memory handling are critical.
 For usage details please see the code snippet in the cmd folder.
 */
 package g711

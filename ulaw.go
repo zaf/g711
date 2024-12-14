@@ -78,10 +78,17 @@ var (
 // EncodeUlaw encodes 16bit LPCM data to G711 u-law PCM
 func EncodeUlaw(lpcm []byte) []byte {
 	ulaw := make([]byte, len(lpcm)>>1)
+	EncodeUlawTo(lpcm, ulaw)
+	return ulaw
+}
+
+// EncodeUlawTo encodes 16bit LPCM data to G711 u-law PCM
+// using an already allocated buffer provided by the user.
+// The user is responsible for ensuring that the buffer is large enough (half the size of the LPCM data).
+func EncodeUlawTo(lpcm, ulaw []byte) {
 	for i := 0; i < len(lpcm)-1; i += 2 {
 		ulaw[i>>1] = EncodeUlawFrame(int16(lpcm[i]) | int16(lpcm[i+1])<<8)
 	}
-	return ulaw
 }
 
 // EncodeUlawFrame encodes a 16bit LPCM frame to G711 u-law PCM
@@ -102,12 +109,19 @@ func EncodeUlawFrame(frame int16) uint8 {
 // DecodeUlaw decodes u-law PCM data to 16bit LPCM
 func DecodeUlaw(pcm []byte) []byte {
 	lpcm := make([]byte, len(pcm)*2)
+	DecodeUlawTo(pcm, lpcm)
+	return lpcm
+}
+
+// DecodeUlawTo decodes u-law PCM data to 16bit LPCM
+// using an already allocated buffer provided by the user.
+// The user is responsible for ensuring that the buffer is large enough (double the size of the PCM data).
+func DecodeUlawTo(pcm, lpcm []byte) {
 	for i := 0; i < len(pcm); i++ {
 		frame := ulaw2lpcm[pcm[i]]
 		lpcm[i*2] = byte(frame)
 		lpcm[i*2+1] = byte(frame >> 8)
 	}
-	return lpcm
 }
 
 // DecodeUlawFrame decodes a u-law PCM frame to 16bit LPCM
@@ -118,10 +132,17 @@ func DecodeUlawFrame(frame uint8) int16 {
 // Ulaw2Alaw performs direct u-law to A-law data conversion
 func Ulaw2Alaw(ulaw []byte) []byte {
 	alaw := make([]byte, len(ulaw))
+	Ulaw2AlawTo(ulaw, alaw)
+	return alaw
+}
+
+// Ulaw2AlawTo performs direct u-law to A-law data conversion
+// using an already allocated buffer provided by the user.
+// The user is responsible for ensuring that the buffer is large enough (the size of the A-law data).
+func Ulaw2AlawTo(ulaw, alaw []byte) {
 	for i := 0; i < len(alaw); i++ {
 		alaw[i] = ulaw2alaw[ulaw[i]]
 	}
-	return alaw
 }
 
 // Ulaw2AlawFrame directly converts a u-law frame to A-law

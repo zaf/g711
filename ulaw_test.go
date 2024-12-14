@@ -25,7 +25,23 @@ func BenchmarkEncodeUlaw(b *testing.B) {
 	b.SetBytes(int64(len(rawData)))
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		EncodeUlaw(rawData)
+		ualw := EncodeUlaw(rawData)
+		_ = ualw
+	}
+}
+
+// Benchmark EncodeUlawTo
+func BenchmarkEncodeUlawTo(b *testing.B) {
+	rawData, err := os.ReadFile("testing/speech.raw")
+	if err != nil {
+		b.Fatalf("Failed to read test data: %s\n", err)
+	}
+	b.SetBytes(int64(len(rawData)))
+	ulaw := make([]byte, len(rawData)>>1)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		EncodeUlawTo(rawData, ulaw)
+		_ = ulaw
 	}
 }
 
@@ -38,7 +54,23 @@ func BenchmarkDecodeUlaw(b *testing.B) {
 	b.SetBytes(int64(len(uData)))
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		DecodeUlaw(uData)
+		lpcm := DecodeUlaw(uData)
+		_ = lpcm
+	}
+}
+
+// Benchmark DecodeUlawTo
+func BenchmarkDecodeUlawTo(b *testing.B) {
+	uData, err := os.ReadFile("testing/speech.ulaw")
+	if err != nil {
+		b.Fatalf("Failed to read test data: %s\n", err)
+	}
+	b.SetBytes(int64(len(uData)))
+	lpcm := make([]byte, len(uData)<<1)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		DecodeUlawTo(uData, lpcm)
+		_ = lpcm
 	}
 }
 
@@ -51,6 +83,22 @@ func BenchmarkUlaw2Alaw(b *testing.B) {
 	b.SetBytes(int64(len(uData)))
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		Ulaw2Alaw(uData)
+		alaw := Ulaw2Alaw(uData)
+		_ = alaw
+	}
+}
+
+// Benchmark Ulaw2AlawTo
+func BenchmarkUlaw2AlawTo(b *testing.B) {
+	uData, err := os.ReadFile("testing/speech.ulaw")
+	if err != nil {
+		b.Fatalf("Failed to read test data: %s\n", err)
+	}
+	b.SetBytes(int64(len(uData)))
+	alaw := make([]byte, len(uData))
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		Ulaw2AlawTo(uData, alaw)
+		_ = alaw
 	}
 }
