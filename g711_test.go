@@ -108,7 +108,10 @@ var TranscoderTest = []struct {
 func TestEncode(t *testing.T) {
 	aenc, _ := NewCoder(io.Discard, Lpcm, Alaw)
 	for _, tc := range EncoderTest {
-		i, _ := aenc.Write(tc.data)
+		i, err := aenc.Write(tc.data)
+		if err != nil {
+			t.Errorf("Alaw Encode: unexpected error: %v", err)
+		}
 		if i != tc.expected {
 			t.Errorf("Alaw Encode: expected: %d , actual: %d", tc.expected, i)
 		}
@@ -116,7 +119,10 @@ func TestEncode(t *testing.T) {
 	aenc.Close()
 	uenc, _ := NewCoder(io.Discard, Lpcm, Ulaw)
 	for _, tc := range EncoderTest {
-		i, _ := uenc.Write(tc.data)
+		i, err := uenc.Write(tc.data)
+		if err != nil {
+			t.Errorf("ulaw Encode: unexpected error: %v", err)
+		}
 		if i != tc.expected {
 			t.Errorf("ulaw Encode: expected: %d , actual: %d", tc.expected, i)
 		}
@@ -124,7 +130,10 @@ func TestEncode(t *testing.T) {
 	uenc.Close()
 	utrans, _ := NewCoder(io.Discard, Alaw, Ulaw)
 	for _, tc := range TranscoderTest {
-		i, _ := utrans.Write(tc.data)
+		i, err := utrans.Write(tc.data)
+		if err != nil {
+			t.Errorf("ulaw Transcode: unexpected error: %v", err)
+		}
 		if i != tc.expected {
 			t.Errorf("ulaw Transcode: expected: %d , actual: %d", tc.expected, i)
 		}
@@ -136,7 +145,10 @@ func TestEncode(t *testing.T) {
 func TestDecode(t *testing.T) {
 	adec, _ := NewCoder(io.Discard, Alaw, Lpcm)
 	for _, tc := range DecoderTest {
-		i, _ := adec.Write(tc.data)
+		i, err := adec.Write(tc.data)
+		if err != nil {
+			t.Errorf("Alaw Decode: unexpected error: %v", err)
+		}
 		if i != tc.expected {
 			t.Errorf("Alaw Decode: expected: %d , actual: %d", tc.expected, i)
 		}
@@ -144,7 +156,10 @@ func TestDecode(t *testing.T) {
 	adec.Close()
 	udec, _ := NewCoder(io.Discard, Ulaw, Lpcm)
 	for _, tc := range DecoderTest {
-		i, _ := udec.Write(tc.data)
+		i, err := udec.Write(tc.data)
+		if err != nil {
+			t.Errorf("ulaw Decode: unexpected error: %v", err)
+		}
 		if i != tc.expected {
 			t.Errorf("ulaw Decode: expected: %d , actual: %d", tc.expected, i)
 		}

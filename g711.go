@@ -100,7 +100,6 @@ func (w *Coder) Close() error {
 	w.destination = nil
 	w.translate = nil
 	w.written = 0
-	w = nil
 	return nil
 }
 
@@ -127,10 +126,10 @@ func (w *Coder) Write(p []byte) (int, error) {
 	// If we are encoding to g711 we need to multiply the number of bytes written by 2 to avoid reporting short writes
 	// this happens because 2 bytes of input data are encoded to 1 byte of output data.
 	// In a similar manner if we are decoding from g711 we need to divide the number of bytes written by 2.
-	switch {
-	case w.written == double:
+	switch w.written {
+	case double:
 		i <<= 1
-	case w.written == half:
+	case half:
 		i >>= 1
 	}
 	return i, err

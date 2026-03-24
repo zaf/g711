@@ -140,7 +140,7 @@ func Ulaw2Alaw(ulaw []byte) []byte {
 // using an already allocated buffer provided by the user.
 // The user is responsible for ensuring that the buffer is large enough (the size of the A-law data).
 func Ulaw2AlawTo(ulaw, alaw []byte) {
-	for i := 0; i < len(alaw); i++ {
+	for i := 0; i < len(ulaw); i++ {
 		alaw[i] = ulaw2alaw[ulaw[i]]
 	}
 }

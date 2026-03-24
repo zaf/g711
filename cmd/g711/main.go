@@ -59,6 +59,7 @@ func translate(file string) error {
 	if err != nil {
 		return err
 	}
+	defer input.Close()
 	inExtension := strings.ToLower(filepath.Ext(file))
 
 	inFormat := formats[strings.ToLower(*in)]
