@@ -70,6 +70,16 @@ var (
 	}
 )
 
+// LPCM to A-law conversion lookup table, indexed by the 12 Most Significant
+// Bits of the input sample, as A-law uses only the 12 MSBs of the 16bit input
+var lpcm2alaw [1 << 12]uint8
+
+func init() {
+	for i := range lpcm2alaw {
+		lpcm2alaw[i] = EncodeAlawFrame(int16(i << 4))
+	}
+}
+
 // EncodeAlaw encodes 16bit LPCM data to G711 A-law PCM
 func EncodeAlaw(lpcm []byte) []byte {
 	alaw := make([]byte, len(lpcm)>>1)
@@ -81,8 +91,23 @@ func EncodeAlaw(lpcm []byte) []byte {
 // using an already allocated buffer provided by the user.
 // The user is responsible for ensuring that the buffer is large enough (half the size of the LPCM data).
 func EncodeAlawTo(lpcm, alaw []byte) {
-	for i := 0; i < len(lpcm)-1; i += 2 {
-		alaw[i>>1] = EncodeAlawFrame(int16(lpcm[i]) | int16(lpcm[i+1])<<8)
+	n := len(lpcm)
+	i := 0
+	// Process 4 frames per iteration, so that 4 independent table lookups
+	// are in flight at any time, keeping the CPU pipeline busy
+	for ; i+8 <= n; i += 8 {
+		a := lpcm2alaw[(uint16(lpcm[i])|uint16(lpcm[i+1])<<8)>>4]
+		b := lpcm2alaw[(uint16(lpcm[i+2])|uint16(lpcm[i+3])<<8)>>4]
+		c := lpcm2alaw[(uint16(lpcm[i+4])|uint16(lpcm[i+5])<<8)>>4]
+		d := lpcm2alaw[(uint16(lpcm[i+6])|uint16(lpcm[i+7])<<8)>>4]
+		alaw[i>>1] = a
+		alaw[(i>>1)+1] = b
+		alaw[(i>>1)+2] = c
+		alaw[(i>>1)+3] = d
+	}
+	// Handle trailing frames
+	for ; i < n-1; i += 2 {
+		alaw[i>>1] = lpcm2alaw[(uint16(lpcm[i])|uint16(lpcm[i+1])<<8)>>4]
 	}
 }
 
@@ -113,7 +138,26 @@ func DecodeAlaw(pcm []byte) []byte {
 // using an already allocated buffer provided by the user.
 // The user is responsible for ensuring that the buffer is large enough (double the size of the PCM data).
 func DecodeAlawTo(pcm, lpcm []byte) {
-	for i := 0; i < len(pcm); i++ {
+	n := len(pcm)
+	i := 0
+	// Process 4 samples per iteration, so that 4 independent table lookups
+	// are in flight at any time, keeping the CPU pipeline busy
+	for ; i+3 < n; i += 4 {
+		a := alaw2lpcm[pcm[i]]
+		b := alaw2lpcm[pcm[i+1]]
+		c := alaw2lpcm[pcm[i+2]]
+		d := alaw2lpcm[pcm[i+3]]
+		lpcm[i*2] = byte(a)
+		lpcm[i*2+1] = byte(a >> 8)
+		lpcm[i*2+2] = byte(b)
+		lpcm[i*2+3] = byte(b >> 8)
+		lpcm[i*2+4] = byte(c)
+		lpcm[i*2+5] = byte(c >> 8)
+		lpcm[i*2+6] = byte(d)
+		lpcm[i*2+7] = byte(d >> 8)
+	}
+	// Handle trailing samples
+	for ; i < n; i++ {
 		frame := alaw2lpcm[pcm[i]]
 		lpcm[i*2] = byte(frame)
 		lpcm[i*2+1] = byte(frame >> 8)

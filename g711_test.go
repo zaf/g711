@@ -13,6 +13,7 @@ package g711
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"os"
 	"testing"
@@ -76,10 +77,10 @@ var EncoderTest = []struct {
 	expected int
 }{
 	{[]byte{}, 0},
-	{[]byte{0x01}, 0},
+	{[]byte{0x01}, 1},
 	{[]byte{0x01, 0x00}, 2},
 	{[]byte{0x01, 0x00, 0x7c, 0x7f, 0xd1, 0xd0, 0xd3, 0xd2, 0xdd, 0xdc, 0xdf, 0xde}, 12},
-	{[]byte{0x01, 0x00, 0x7c, 0x7f, 0xd1, 0xd0, 0xd3, 0xd2, 0xdd, 0xdc, 0xdf, 0xde, 0xd9}, 12},
+	{[]byte{0x01, 0x00, 0x7c, 0x7f, 0xd1, 0xd0, 0xd3, 0xd2, 0xdd, 0xdc, 0xdf, 0xde, 0xd9}, 13},
 }
 
 var DecoderTest = []struct {
@@ -165,6 +166,105 @@ func TestDecode(t *testing.T) {
 		}
 	}
 	udec.Close()
+}
+
+// Test writing after Close and on a zero value Coder
+func TestWriteAfterClose(t *testing.T) {
+	writer := bytes.NewBuffer([]byte{})
+	coder, _ := NewCoder(writer, Lpcm, Alaw)
+	coder.Close()
+	_, err := coder.Write([]byte{0x00, 0x00})
+	if err == nil {
+		t.Error("Expected error when writing after Close, got nil")
+	}
+	var zeroCoder Coder
+	_, err = zeroCoder.Write([]byte{0x00, 0x00})
+	if err == nil {
+		t.Error("Expected error when writing to a zero value Coder, got nil")
+	}
+}
+
+// Test that samples split between Write calls are completed and that
+// the streamed output matches the output of the low level buffer API
+func TestSplitSample(t *testing.T) {
+	rawData, err := os.ReadFile("testing/speech.raw")
+	if err != nil {
+		t.Fatalf("Failed to read test data: %s\n", err)
+	}
+	for _, chunk := range []int{1, 3, 5, 7, 1023, 4095} {
+		for _, length := range []int{len(rawData), len(rawData) - 1} {
+			for _, format := range []int{Alaw, Ulaw} {
+				data := rawData[:length]
+				var buf bytes.Buffer
+				coder, _ := NewCoder(&buf, Lpcm, format)
+				for off := 0; off < len(data); off += chunk {
+					end := off + chunk
+					if end > len(data) {
+						end = len(data)
+					}
+					i, err := coder.Write(data[off:end])
+					if err != nil {
+						t.Fatalf("Write failed: %s\n", err)
+					}
+					if i != end-off {
+						t.Errorf("Chunk size %d: expected %d bytes written, actual: %d\n", chunk, end-off, i)
+					}
+				}
+				coder.Close()
+				var ref []byte
+				if format == Alaw {
+					ref = EncodeAlaw(data)
+				} else {
+					ref = EncodeUlaw(data)
+				}
+				if !bytes.Equal(buf.Bytes(), ref) {
+					t.Errorf("Chunk size %d: streamed output does not match buffer API output\n", chunk)
+				}
+			}
+		}
+	}
+}
+
+// Test that Writes that stop early can be resumed without data loss
+func TestResumeAfterShortWrite(t *testing.T) {
+	rawData, err := os.ReadFile("testing/speech.raw")
+	if err != nil {
+		t.Fatalf("Failed to read test data: %s\n", err)
+	}
+	for _, k := range []int{1, 999} {
+		writer := &limitedWriter{k: k}
+		coder, _ := NewCoder(writer, Lpcm, Alaw)
+		data := rawData[:4002]
+		for len(data) > 0 {
+			i, err := coder.Write(data)
+			if err != nil {
+				if i < 0 || i > len(data) {
+					t.Fatalf("Invalid number of bytes reported: %d\n", i)
+				}
+				data = data[i:]
+				continue
+			}
+			break
+		}
+		coder.Close()
+		if !bytes.Equal(writer.buf.Bytes(), EncodeAlaw(rawData[:4002])) {
+			t.Errorf("Limit %d: resumed output does not match buffer API output\n", k)
+		}
+	}
+}
+
+// limitedWriter accepts up to k bytes per Write, failing anything longer
+type limitedWriter struct {
+	buf bytes.Buffer
+	k   int
+}
+
+func (l *limitedWriter) Write(p []byte) (int, error) {
+	if len(p) <= l.k {
+		return l.buf.Write(p)
+	}
+	l.buf.Write(p[:l.k])
+	return l.k, errors.New("short write")
 }
 
 // Benchmark Encoding data to Alaw

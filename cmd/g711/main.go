@@ -82,6 +82,13 @@ func translate(file string) error {
 	}
 	// enc/dec/transcode the input file data and write to the output file
 	_, err = io.Copy(translator, input)
+	if err != nil {
+		// Discard the partially processed output file on errors
+		outFile.Close()
+		translator.Close()
+		os.Remove(outName)
+		return err
+	}
 	outFile.Sync()
 	return err
 }
