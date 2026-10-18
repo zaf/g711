@@ -1,5 +1,5 @@
 /*
-	Copyright (C) 2016 - 2024, Lefteris Zafiris <zaf@fastmail.com>
+	Copyright (C) 2016 - 2026, Lefteris Zafiris <zaf@fastmail.com>
 
 	This program is free software, distributed under the terms of
 	the BSD 3-Clause License. See the LICENSE file
@@ -11,7 +11,10 @@
 
 package g711
 
-import "math/bits"
+import (
+	"encoding/binary"
+	"math/bits"
+)
 
 var (
 	// A-law to LPCM conversion lookup table
@@ -139,28 +142,29 @@ func DecodeAlaw(pcm []byte) []byte {
 // The user is responsible for ensuring that the buffer is large enough (double the size of the PCM data).
 func DecodeAlawTo(pcm, lpcm []byte) {
 	n := len(pcm)
-	i := 0
-	// Process 4 samples per iteration, so that 4 independent table lookups
-	// are in flight at any time, keeping the CPU pipeline busy
-	for ; i+3 < n; i += 4 {
-		a := alaw2lpcm[pcm[i]]
-		b := alaw2lpcm[pcm[i+1]]
-		c := alaw2lpcm[pcm[i+2]]
-		d := alaw2lpcm[pcm[i+3]]
-		lpcm[i*2] = byte(a)
-		lpcm[i*2+1] = byte(a >> 8)
-		lpcm[i*2+2] = byte(b)
-		lpcm[i*2+3] = byte(b >> 8)
-		lpcm[i*2+4] = byte(c)
-		lpcm[i*2+5] = byte(c >> 8)
-		lpcm[i*2+6] = byte(d)
-		lpcm[i*2+7] = byte(d >> 8)
+	i, j := 0, 0
+	// Process 8 samples per iteration, so that 8 independent table lookups
+	// are in flight at any time, keeping the CPU pipeline busy. The decoded
+	// 16bit samples are packed into uint64 values so that each pair of them
+	// is stored with a single wide store.
+	// NB: the samples are converted to uint16 first, converting an int16
+	// directly to uint64 would sign-extend and corrupt the packed value.
+	for ; i+8 <= n; i, j = i+8, j+16 {
+		w := binary.LittleEndian.Uint64(pcm[i:])
+		lo := uint64(uint16(alaw2lpcm[uint8(w)])) |
+			uint64(uint16(alaw2lpcm[uint8(w>>8)]))<<16 |
+			uint64(uint16(alaw2lpcm[uint8(w>>16)]))<<32 |
+			uint64(uint16(alaw2lpcm[uint8(w>>24)]))<<48
+		hi := uint64(uint16(alaw2lpcm[uint8(w>>32)])) |
+			uint64(uint16(alaw2lpcm[uint8(w>>40)]))<<16 |
+			uint64(uint16(alaw2lpcm[uint8(w>>48)]))<<32 |
+			uint64(uint16(alaw2lpcm[uint8(w>>56)]))<<48
+		binary.LittleEndian.PutUint64(lpcm[j:], lo)
+		binary.LittleEndian.PutUint64(lpcm[j+8:], hi)
 	}
 	// Handle trailing samples
-	for ; i < n; i++ {
-		frame := alaw2lpcm[pcm[i]]
-		lpcm[i*2] = byte(frame)
-		lpcm[i*2+1] = byte(frame >> 8)
+	for ; i < n; i, j = i+1, j+2 {
+		binary.LittleEndian.PutUint16(lpcm[j:], uint16(alaw2lpcm[pcm[i]]))
 	}
 }
 
