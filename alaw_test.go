@@ -1,5 +1,5 @@
 /*
-	Copyright (C) 2016 - 2024, Lefteris Zafiris <zaf@fastmail.com>
+	Copyright (C) 2016 - 2026, Lefteris Zafiris <zaf@fastmail.com>
 
 	This program is free software, distributed under the terms of
 	the BSD 3-Clause License. See the LICENSE file
@@ -25,7 +25,23 @@ func BenchmarkEncodeAlaw(b *testing.B) {
 	b.SetBytes(int64(len(rawData)))
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		EncodeAlaw(rawData)
+		alaw := EncodeAlaw(rawData)
+		_ = alaw
+	}
+}
+
+// Benchmark EncodeAlawTo
+func BenchmarkEncodeAlawTo(b *testing.B) {
+	rawData, err := os.ReadFile("testing/speech.raw")
+	if err != nil {
+		b.Fatalf("Failed to read test data: %s\n", err)
+	}
+	alaw := make([]byte, len(rawData)>>1)
+	b.SetBytes(int64(len(rawData)))
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		EncodeAlawTo(rawData, alaw)
+		_ = alaw
 	}
 }
 
@@ -38,7 +54,23 @@ func BenchmarkDecodeAlaw(b *testing.B) {
 	b.SetBytes(int64(len(aData)))
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		DecodeAlaw(aData)
+		lpcm := DecodeAlaw(aData)
+		_ = lpcm
+	}
+}
+
+// Benchmark DecodeAlawTo
+func BenchmarkDecodeAlawTo(b *testing.B) {
+	aData, err := os.ReadFile("testing/speech.alaw")
+	if err != nil {
+		b.Fatalf("Failed to read test data: %s\n", err)
+	}
+	lpcm := make([]byte, len(aData)<<1)
+	b.SetBytes(int64(len(aData)))
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		DecodeAlawTo(aData, lpcm)
+		_ = lpcm
 	}
 }
 
@@ -51,6 +83,22 @@ func BenchmarkAlaw2Ulaw(b *testing.B) {
 	b.SetBytes(int64(len(aData)))
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		Alaw2Ulaw(aData)
+		ulaw := Alaw2Ulaw(aData)
+		_ = ulaw
+	}
+}
+
+// Benchmark Alaw2UlawTo
+func BenchmarkAlaw2UlawTo(b *testing.B) {
+	aData, err := os.ReadFile("testing/speech.alaw")
+	if err != nil {
+		b.Fatalf("Failed to read test data: %s\n", err)
+	}
+	ulaw := make([]byte, len(aData))
+	b.SetBytes(int64(len(aData)))
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		Alaw2UlawTo(aData, ulaw)
+		_ = ulaw
 	}
 }

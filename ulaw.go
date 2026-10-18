@@ -1,5 +1,5 @@
 /*
-	Copyright (C) 2016 - 2024, Lefteris Zafiris <zaf@fastmail.com>
+	Copyright (C) 2016 - 2026, Lefteris Zafiris <zaf@fastmail.com>
 
 	This program is free software, distributed under the terms of
 	the BSD 3-Clause License. See the LICENSE file
@@ -11,7 +11,10 @@
 
 package g711
 
-import "math/bits"
+import (
+	"encoding/binary"
+	"math/bits"
+)
 
 const (
 	ulawBias = 33
@@ -75,22 +78,50 @@ var (
 	}
 )
 
+// LPCM to u-law conversion lookup table, indexed by the 14 Most Significant
+// Bits of the input sample, as u-law uses only the 14 MSBs of the 16bit input
+var lpcm2ulaw [1 << 14]uint8
+
+func init() {
+	for i := range lpcm2ulaw {
+		lpcm2ulaw[i] = EncodeUlawFrame(int16(i << 2))
+	}
+}
+
 // EncodeUlaw encodes 16bit LPCM data to G711 u-law PCM
 func EncodeUlaw(lpcm []byte) []byte {
-	if len(lpcm) < 2 {
-		return []byte{}
-	}
-	ulaw := make([]byte, len(lpcm)/2)
-	for i, j := 0, 0; j <= len(lpcm)-2; i, j = i+1, j+2 {
-		ulaw[i] = EncodeUlawFrame(int16(lpcm[j]) | int16(lpcm[j+1])<<8)
-	}
+	ulaw := make([]byte, len(lpcm)>>1)
+	EncodeUlawTo(lpcm, ulaw)
 	return ulaw
+}
+
+// EncodeUlawTo encodes 16bit LPCM data to G711 u-law PCM
+// using an already allocated buffer provided by the user.
+// The user is responsible for ensuring that the buffer is large enough (half the size of the LPCM data).
+func EncodeUlawTo(lpcm, ulaw []byte) {
+	n := len(lpcm)
+	i := 0
+	// Process 4 frames per iteration, so that 4 independent table lookups
+	// are in flight at any time, keeping the CPU pipeline busy
+	for ; i+8 <= n; i += 8 {
+		a := lpcm2ulaw[(uint16(lpcm[i])|uint16(lpcm[i+1])<<8)>>2]
+		b := lpcm2ulaw[(uint16(lpcm[i+2])|uint16(lpcm[i+3])<<8)>>2]
+		c := lpcm2ulaw[(uint16(lpcm[i+4])|uint16(lpcm[i+5])<<8)>>2]
+		d := lpcm2ulaw[(uint16(lpcm[i+6])|uint16(lpcm[i+7])<<8)>>2]
+		ulaw[i>>1] = a
+		ulaw[(i>>1)+1] = b
+		ulaw[(i>>1)+2] = c
+		ulaw[(i>>1)+3] = d
+	}
+	// Handle trailing frames
+	for ; i < n-1; i += 2 {
+		ulaw[i>>1] = lpcm2ulaw[(uint16(lpcm[i])|uint16(lpcm[i+1])<<8)>>2]
+	}
 }
 
 // EncodeUlawFrame encodes a 16bit LPCM frame to G711 u-law PCM
 func EncodeUlawFrame(frame int16) uint8 {
-	var lowNibble, seg, sign int16
-	sign = ((^frame) >> 8) & 0x80
+	sign := ((^frame) >> 8) & 0x80
 	if sign == 0 {
 		frame = ^frame
 	}
@@ -98,20 +129,47 @@ func EncodeUlawFrame(frame int16) uint8 {
 	if frame > ulawClip {
 		frame = ulawClip
 	}
-	seg = int16(16 - bits.LeadingZeros16(uint16(frame>>5)))
-	lowNibble = 0x000F - ((frame >> (seg)) & 0x000F)
+	seg := int16(16 - bits.LeadingZeros16(uint16(frame>>5)))
+	lowNibble := 0x000F - ((frame >> (seg)) & 0x000F)
 	return uint8(sign | ((8 - seg) << 4) | lowNibble)
 }
 
 // DecodeUlaw decodes u-law PCM data to 16bit LPCM
 func DecodeUlaw(pcm []byte) []byte {
 	lpcm := make([]byte, len(pcm)*2)
-	for i, j := 0, 0; i < len(pcm); i, j = i+1, j+2 {
-		frame := ulaw2lpcm[pcm[i]]
-		lpcm[j] = byte(frame)
-		lpcm[j+1] = byte(frame >> 8)
-	}
+	DecodeUlawTo(pcm, lpcm)
 	return lpcm
+}
+
+// DecodeUlawTo decodes u-law PCM data to 16bit LPCM
+// using an already allocated buffer provided by the user.
+// The user is responsible for ensuring that the buffer is large enough (double the size of the PCM data).
+func DecodeUlawTo(pcm, lpcm []byte) {
+	n := len(pcm)
+	i, j := 0, 0
+	// Process 8 samples per iteration, so that 8 independent table lookups
+	// are in flight at any time, keeping the CPU pipeline busy. The decoded
+	// 16bit samples are packed into uint64 values so that each pair of them
+	// is stored with a single wide store.
+	// NB: the samples are converted to uint16 first, converting an int16
+	// directly to uint64 would sign-extend and corrupt the packed value.
+	for ; i+8 <= n; i, j = i+8, j+16 {
+		w := binary.LittleEndian.Uint64(pcm[i:])
+		lo := uint64(uint16(ulaw2lpcm[uint8(w)])) |
+			uint64(uint16(ulaw2lpcm[uint8(w>>8)]))<<16 |
+			uint64(uint16(ulaw2lpcm[uint8(w>>16)]))<<32 |
+			uint64(uint16(ulaw2lpcm[uint8(w>>24)]))<<48
+		hi := uint64(uint16(ulaw2lpcm[uint8(w>>32)])) |
+			uint64(uint16(ulaw2lpcm[uint8(w>>40)]))<<16 |
+			uint64(uint16(ulaw2lpcm[uint8(w>>48)]))<<32 |
+			uint64(uint16(ulaw2lpcm[uint8(w>>56)]))<<48
+		binary.LittleEndian.PutUint64(lpcm[j:], lo)
+		binary.LittleEndian.PutUint64(lpcm[j+8:], hi)
+	}
+	// Handle trailing samples
+	for ; i < n; i, j = i+1, j+2 {
+		binary.LittleEndian.PutUint16(lpcm[j:], uint16(ulaw2lpcm[pcm[i]]))
+	}
 }
 
 // DecodeUlawFrame decodes a u-law PCM frame to 16bit LPCM
@@ -122,10 +180,17 @@ func DecodeUlawFrame(frame uint8) int16 {
 // Ulaw2Alaw performs direct u-law to A-law data conversion
 func Ulaw2Alaw(ulaw []byte) []byte {
 	alaw := make([]byte, len(ulaw))
-	for i := 0; i < len(alaw); i++ {
+	Ulaw2AlawTo(ulaw, alaw)
+	return alaw
+}
+
+// Ulaw2AlawTo performs direct u-law to A-law data conversion
+// using an already allocated buffer provided by the user.
+// The user is responsible for ensuring that the buffer is large enough (the size of the u-law data).
+func Ulaw2AlawTo(ulaw, alaw []byte) {
+	for i := 0; i < len(ulaw); i++ {
 		alaw[i] = ulaw2alaw[ulaw[i]]
 	}
-	return alaw
 }
 
 // Ulaw2AlawFrame directly converts a u-law frame to A-law
