@@ -9,6 +9,11 @@ The package exposes a high level API for encoding and decoding through
 an io.WriteCloser. But also a low level API using preallocated buffers
 for cases where performance and memory handling are critical.
 
+> [NOTE]
+> In v2 the streaming `Encoder`/`Decoder` types
+> were replaced by a single `Coder`. See [MIGRATION.md](MIGRATION.md)
+> for a summary of the changes and step by step update instructions.
+
 For usage details please see the code snippet in the cmd folder.
 
 ## Constants
