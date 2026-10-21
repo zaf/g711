@@ -25,7 +25,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/zaf/g711"
+	"github.com/zaf/g711/v2"
 )
 
 const wavHeader = 44

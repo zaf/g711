@@ -1,6 +1,6 @@
 # g711
 
-[![GoDoc](https://img.shields.io/badge/pkg.go.dev-doc-blue)](https://pkg.go.dev/github.com/zaf/g711)
+[![GoDoc](https://img.shields.io/badge/pkg.go.dev-doc-blue)](https://pkg.go.dev/github.com/zaf/g711/v2)
 
 Package g711 implements encoding and decoding of G711 PCM sound data.
 G.711 is an ITU-T standard for audio companding.
