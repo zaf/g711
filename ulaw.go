@@ -101,21 +101,26 @@ func EncodeUlaw(lpcm []byte) []byte {
 func EncodeUlawTo(lpcm, ulaw []byte) {
 	n := len(lpcm)
 	i := 0
-	// Process 4 frames per iteration, so that 4 independent table lookups
-	// are in flight at any time, keeping the CPU pipeline busy. The 8 input
-	// bytes are read with a single wide load. Writing the loop guard as
-	// i < n-7 (instead of i+8 <= n) lets the compiler prove that all loads
-	// are in bounds, so it elides their bounds checks.
-	for ; i < n-7; i += 8 {
-		w := binary.LittleEndian.Uint64(lpcm[i:])
-		a := lpcm2ulaw[uint16(w)>>2]
-		b := lpcm2ulaw[uint16(w>>16)>>2]
-		c := lpcm2ulaw[uint16(w>>32)>>2]
-		d := lpcm2ulaw[uint16(w>>48)>>2]
-		ulaw[i>>1] = a
-		ulaw[(i>>1)+1] = b
-		ulaw[(i>>1)+2] = c
-		ulaw[(i>>1)+3] = d
+	// Process 8 frames per iteration, so that 8 independent table lookups
+	// are in flight at any time, keeping the CPU pipeline busy. The 16 input
+	// bytes are read with two wide loads. Writing the loop  as
+	// i < n-15 (instead of i+16 <= n) lets the compiler prove that the
+	// input loads are in bounds, so it avoids bounds checks. The
+	// output frames are stored through a fixed-size subslice: slicing costs
+	// a single bounds check per iteration and the following constant-index
+	// stores are then provably in bounds, so they carry no bounds checks.
+	for ; i < n-15; i += 16 {
+		w0 := binary.LittleEndian.Uint64(lpcm[i:])
+		w1 := binary.LittleEndian.Uint64(lpcm[i+8:])
+		o := ulaw[i>>1 : (i>>1)+8]
+		o[0] = lpcm2ulaw[uint16(w0)>>2]
+		o[1] = lpcm2ulaw[uint16(w0>>16)>>2]
+		o[2] = lpcm2ulaw[uint16(w0>>32)>>2]
+		o[3] = lpcm2ulaw[uint16(w0>>48)>>2]
+		o[4] = lpcm2ulaw[uint16(w1)>>2]
+		o[5] = lpcm2ulaw[uint16(w1>>16)>>2]
+		o[6] = lpcm2ulaw[uint16(w1>>32)>>2]
+		o[7] = lpcm2ulaw[uint16(w1>>48)>>2]
 	}
 	// Handle trailing frames
 	for ; i < n-1; i += 2 {
@@ -151,26 +156,36 @@ func DecodeUlaw(pcm []byte) []byte {
 func DecodeUlawTo(pcm, lpcm []byte) {
 	n := len(pcm)
 	i, j := 0, 0
-	// Process 8 samples per iteration, so that 8 independent table lookups
-	// are in flight at any time, keeping the CPU pipeline busy. The decoded
-	// 16bit samples are packed into uint64 values so that each pair of them
-	// is stored with a single wide store.
+	// Process 16 samples per iteration, so that 16 independent table
+	// lookups are in flight at any time, keeping the CPU pipeline busy.
+	// The decoded 16bit samples are packed into uint64 values so that each
+	// 4 of them are stored with a single wide store.
 	// NB: the samples are converted to uint16 first, converting an int16
 	// directly to uint64 would sign-extend and corrupt the packed value.
-	// As in EncodeUlawTo, the i < n-7 guard lets the compiler elide the
-	// input-side bounds checks.
-	for ; i < n-7; i, j = i+8, j+16 {
-		w := binary.LittleEndian.Uint64(pcm[i:])
-		lo := uint64(uint16(ulaw2lpcm[uint8(w)])) |
-			uint64(uint16(ulaw2lpcm[uint8(w>>8)]))<<16 |
-			uint64(uint16(ulaw2lpcm[uint8(w>>16)]))<<32 |
-			uint64(uint16(ulaw2lpcm[uint8(w>>24)]))<<48
-		hi := uint64(uint16(ulaw2lpcm[uint8(w>>32)])) |
-			uint64(uint16(ulaw2lpcm[uint8(w>>40)]))<<16 |
-			uint64(uint16(ulaw2lpcm[uint8(w>>48)]))<<32 |
-			uint64(uint16(ulaw2lpcm[uint8(w>>56)]))<<48
-		binary.LittleEndian.PutUint64(lpcm[j:], lo)
-		binary.LittleEndian.PutUint64(lpcm[j+8:], hi)
+	for ; i < n-15; i, j = i+16, j+32 {
+		w0 := binary.LittleEndian.Uint64(pcm[i:])
+		w1 := binary.LittleEndian.Uint64(pcm[i+8:])
+		q0 := uint64(uint16(ulaw2lpcm[uint8(w0)])) |
+			uint64(uint16(ulaw2lpcm[uint8(w0>>8)]))<<16 |
+			uint64(uint16(ulaw2lpcm[uint8(w0>>16)]))<<32 |
+			uint64(uint16(ulaw2lpcm[uint8(w0>>24)]))<<48
+		q1 := uint64(uint16(ulaw2lpcm[uint8(w0>>32)])) |
+			uint64(uint16(ulaw2lpcm[uint8(w0>>40)]))<<16 |
+			uint64(uint16(ulaw2lpcm[uint8(w0>>48)]))<<32 |
+			uint64(uint16(ulaw2lpcm[uint8(w0>>56)]))<<48
+		q2 := uint64(uint16(ulaw2lpcm[uint8(w1)])) |
+			uint64(uint16(ulaw2lpcm[uint8(w1>>8)]))<<16 |
+			uint64(uint16(ulaw2lpcm[uint8(w1>>16)]))<<32 |
+			uint64(uint16(ulaw2lpcm[uint8(w1>>24)]))<<48
+		q3 := uint64(uint16(ulaw2lpcm[uint8(w1>>32)])) |
+			uint64(uint16(ulaw2lpcm[uint8(w1>>40)]))<<16 |
+			uint64(uint16(ulaw2lpcm[uint8(w1>>48)]))<<32 |
+			uint64(uint16(ulaw2lpcm[uint8(w1>>56)]))<<48
+		o := lpcm[j : j+32 : j+32]
+		binary.LittleEndian.PutUint64(o[0:], q0)
+		binary.LittleEndian.PutUint64(o[8:], q1)
+		binary.LittleEndian.PutUint64(o[16:], q2)
+		binary.LittleEndian.PutUint64(o[24:], q3)
 	}
 	// Handle trailing samples
 	for ; i < n; i, j = i+1, j+2 {
@@ -196,22 +211,29 @@ func Ulaw2Alaw(ulaw []byte) []byte {
 func Ulaw2AlawTo(ulaw, alaw []byte) {
 	n := len(ulaw)
 	i := 0
-	// Process 8 samples per iteration, so that 8 independent table lookups
-	// are in flight at any time, keeping the CPU pipeline busy. The results
-	// are packed into a uint64 value so that all 8 samples are stored with a
-	// single wide store. The i < n-7 loop guard lets the compiler elide the
-	// input-side bounds checks.
-	for ; i < n-7; i += 8 {
-		w := binary.LittleEndian.Uint64(ulaw[i:])
-		o := uint64(ulaw2alaw[uint8(w)]) |
-			uint64(ulaw2alaw[uint8(w>>8)])<<8 |
-			uint64(ulaw2alaw[uint8(w>>16)])<<16 |
-			uint64(ulaw2alaw[uint8(w>>24)])<<24 |
-			uint64(ulaw2alaw[uint8(w>>32)])<<32 |
-			uint64(ulaw2alaw[uint8(w>>40)])<<40 |
-			uint64(ulaw2alaw[uint8(w>>48)])<<48 |
-			uint64(ulaw2alaw[uint8(w>>56)])<<56
-		binary.LittleEndian.PutUint64(alaw[i:], o)
+	// Process 16 samples per iteration, so that 16 independent table
+	// lookups are in flight at any time, keeping the CPU pipeline busy.
+	// The input bytes are read with two wide loads.
+	for ; i < n-15; i += 16 {
+		w0 := binary.LittleEndian.Uint64(ulaw[i:])
+		w1 := binary.LittleEndian.Uint64(ulaw[i+8:])
+		o := alaw[i : i+16]
+		o[0] = ulaw2alaw[uint8(w0)]
+		o[1] = ulaw2alaw[uint8(w0>>8)]
+		o[2] = ulaw2alaw[uint8(w0>>16)]
+		o[3] = ulaw2alaw[uint8(w0>>24)]
+		o[4] = ulaw2alaw[uint8(w0>>32)]
+		o[5] = ulaw2alaw[uint8(w0>>40)]
+		o[6] = ulaw2alaw[uint8(w0>>48)]
+		o[7] = ulaw2alaw[uint8(w0>>56)]
+		o[8] = ulaw2alaw[uint8(w1)]
+		o[9] = ulaw2alaw[uint8(w1>>8)]
+		o[10] = ulaw2alaw[uint8(w1>>16)]
+		o[11] = ulaw2alaw[uint8(w1>>24)]
+		o[12] = ulaw2alaw[uint8(w1>>32)]
+		o[13] = ulaw2alaw[uint8(w1>>40)]
+		o[14] = ulaw2alaw[uint8(w1>>48)]
+		o[15] = ulaw2alaw[uint8(w1>>56)]
 	}
 	// Handle trailing samples
 	for ; i < n; i++ {
