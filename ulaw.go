@@ -102,12 +102,16 @@ func EncodeUlawTo(lpcm, ulaw []byte) {
 	n := len(lpcm)
 	i := 0
 	// Process 4 frames per iteration, so that 4 independent table lookups
-	// are in flight at any time, keeping the CPU pipeline busy
-	for ; i+8 <= n; i += 8 {
-		a := lpcm2ulaw[(uint16(lpcm[i])|uint16(lpcm[i+1])<<8)>>2]
-		b := lpcm2ulaw[(uint16(lpcm[i+2])|uint16(lpcm[i+3])<<8)>>2]
-		c := lpcm2ulaw[(uint16(lpcm[i+4])|uint16(lpcm[i+5])<<8)>>2]
-		d := lpcm2ulaw[(uint16(lpcm[i+6])|uint16(lpcm[i+7])<<8)>>2]
+	// are in flight at any time, keeping the CPU pipeline busy. The 8 input
+	// bytes are read with a single wide load. Writing the loop guard as
+	// i < n-7 (instead of i+8 <= n) lets the compiler prove that all loads
+	// are in bounds, so it elides their bounds checks.
+	for ; i < n-7; i += 8 {
+		w := binary.LittleEndian.Uint64(lpcm[i:])
+		a := lpcm2ulaw[uint16(w)>>2]
+		b := lpcm2ulaw[uint16(w>>16)>>2]
+		c := lpcm2ulaw[uint16(w>>32)>>2]
+		d := lpcm2ulaw[uint16(w>>48)>>2]
 		ulaw[i>>1] = a
 		ulaw[(i>>1)+1] = b
 		ulaw[(i>>1)+2] = c
@@ -153,7 +157,9 @@ func DecodeUlawTo(pcm, lpcm []byte) {
 	// is stored with a single wide store.
 	// NB: the samples are converted to uint16 first, converting an int16
 	// directly to uint64 would sign-extend and corrupt the packed value.
-	for ; i+8 <= n; i, j = i+8, j+16 {
+	// As in EncodeUlawTo, the i < n-7 guard lets the compiler elide the
+	// input-side bounds checks.
+	for ; i < n-7; i, j = i+8, j+16 {
 		w := binary.LittleEndian.Uint64(pcm[i:])
 		lo := uint64(uint16(ulaw2lpcm[uint8(w)])) |
 			uint64(uint16(ulaw2lpcm[uint8(w>>8)]))<<16 |
@@ -188,7 +194,27 @@ func Ulaw2Alaw(ulaw []byte) []byte {
 // using an already allocated buffer provided by the user.
 // The user is responsible for ensuring that the buffer is large enough (the size of the u-law data).
 func Ulaw2AlawTo(ulaw, alaw []byte) {
-	for i := 0; i < len(ulaw); i++ {
+	n := len(ulaw)
+	i := 0
+	// Process 8 samples per iteration, so that 8 independent table lookups
+	// are in flight at any time, keeping the CPU pipeline busy. The results
+	// are packed into a uint64 value so that all 8 samples are stored with a
+	// single wide store. The i < n-7 loop guard lets the compiler elide the
+	// input-side bounds checks.
+	for ; i < n-7; i += 8 {
+		w := binary.LittleEndian.Uint64(ulaw[i:])
+		o := uint64(ulaw2alaw[uint8(w)]) |
+			uint64(ulaw2alaw[uint8(w>>8)])<<8 |
+			uint64(ulaw2alaw[uint8(w>>16)])<<16 |
+			uint64(ulaw2alaw[uint8(w>>24)])<<24 |
+			uint64(ulaw2alaw[uint8(w>>32)])<<32 |
+			uint64(ulaw2alaw[uint8(w>>40)])<<40 |
+			uint64(ulaw2alaw[uint8(w>>48)])<<48 |
+			uint64(ulaw2alaw[uint8(w>>56)])<<56
+		binary.LittleEndian.PutUint64(alaw[i:], o)
+	}
+	// Handle trailing samples
+	for ; i < n; i++ {
 		alaw[i] = ulaw2alaw[ulaw[i]]
 	}
 }
